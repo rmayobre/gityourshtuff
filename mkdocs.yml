@@ -1,0 +1,19 @@
+site_name: GitYourShtuff
+site_description: User manual for the GitYourShtuff dotfiles template
+site_url: https://rmayobre.github.io/gityourshtuff/
+repo_url: https://github.com/rmayobre/gityourshtuff
+edit_uri: edit/docs/docs/
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: readthedocs
+
+nav:
+  - Introduction: index.md
+  - Installation: install.md
+  - Shell configuration: shell-config.md
+  - Whitelisting files: whitelisting.md
+
+plugins:
+  - search

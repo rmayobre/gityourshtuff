@@ -11,4 +11,3 @@ worktree of a bare repository, and a whitelist `.gitignore` tracks only the file
 - [Whitelisting files](whitelisting.md): track new files and directories
 - [shtuff framework](https://github.com/rmayobre/shtuff): the underlying shell library
 
-Use the search box (or press `S`) to find a topic.
