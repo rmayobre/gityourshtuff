@@ -16,7 +16,7 @@ Keep it minimal: templated file structure, as little scripting as possible.
 
 | Path | Purpose |
 |------|---------|
-| `.shtuff/` | shtuff framework submodule. Do not edit; update via submodule bump. |
+| `.shtuff/` | shtuff framework submodule, pinned to a release tag (not `main`). Do not edit; bump by checking out a newer tag. |
 | `.bashrc`, `.zshrc`, `.profile` | Shell startup files that source `.shtuff/shtuff.sh`. |
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |

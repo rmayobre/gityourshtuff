@@ -82,9 +82,13 @@ Then `git add .vimrc .gitignore && git commit`. Check with `git check-ignore -v 
 
 ## Updating shtuff
 
+The submodule is pinned to a release tag (currently `v1.3.3`), not `main`. To move to a
+newer release:
+
 ```bash
-git submodule update --remote .shtuff
-git add .shtuff && git commit -m "Update shtuff"
+git -C .shtuff fetch --tags
+git -C .shtuff checkout <new-tag>   # e.g. v1.4.0
+git add .shtuff && git commit -m "Bump shtuff to <new-tag>"
 ```
 
 ## Extra worktrees
