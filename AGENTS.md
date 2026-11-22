@@ -48,9 +48,29 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
   See `.shtuff/AGENTS.md` for the API.
 - Keep shell files POSIX-safe where possible (`.profile`); Bash-only in `.bashrc`.
 
+## Keeping docs in sync
+
+The `docs` branch is the user manual. Any change on `main` that affects user-facing
+behavior (shell files, `.config/` layout, `.gitignore` rules, install steps, shtuff
+version) needs a matching change on `docs`.
+
+- Make the docs change on `docs` in a temporary worktree
+  (`git worktree add <tmp>/docs docs`), so the `main` checkout is undisturbed.
+- When a PR is requested for the `main` change, open a second PR from the docs change
+  into `docs` (base `docs`, not `main`). Push the docs change to a branch first; never
+  push directly to `docs` when a PR is expected.
+- **Link the PRs in both descriptions**: the `main` PR body says
+  `Docs: <link or #number of docs PR>`, and the docs PR body says
+  `Code: <link or #number of main PR>`. Create the first PR, then create the second
+  with the link, then edit the first to add the second's link.
+- Keep the two PRs in step: if review feedback changes one, check whether the other
+  needs updating. Merge them together.
+- Skip the docs PR only when the change has no user-facing effect, and say so in the
+  `main` PR description.
+
 ## Do / don't
 
 - Do keep files small, commented, and easy to replace with a user's own.
 - Do update `README.md` when install steps change.
 - Don't add install scripts that touch the system without a clear need.
-- Don't create pull requests or commit unless asked.
+- Don't create pull requests or commit unless asked. When asked for a PR on `main`, the docs PR is part of that request (see above).
