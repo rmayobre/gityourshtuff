@@ -1,0 +1,6 @@
+# ~/.gitconfig -- replace with your own details
+[user]
+	name = Your Name
+	email = you@example.com
+[init]
+	defaultBranch = main

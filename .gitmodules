@@ -1,0 +1,3 @@
+[submodule ".shtuff"]
+	path = .shtuff
+	url = https://github.com/rmayobre/shtuff.git

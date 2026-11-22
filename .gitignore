@@ -1,0 +1,34 @@
+# Whitelist-only: ignore everything, then explicitly allow what is tracked.
+# This repo's worktree is $HOME, so anything not listed here must stay untracked.
+*
+
+# Repo metadata
+!/.gitignore
+!/.gitmodules
+!/install.sh
+!/README.md
+!/LICENSE
+!/AGENTS.md
+!/CLAUDE.md
+
+# shtuff framework (submodule)
+!/.shtuff
+
+# Shell
+!/.profile
+!/.bashrc
+!/.zshrc
+
+# Git
+!/.gitconfig
+
+# ~/.config -- allow the directory, then whitelist each app inside it.
+# Directories must be re-included at every level before their contents can be.
+!/.config/
+/.config/*
+!/.config/shell/
+!/.config/shell/**
+
+# Example for another app:
+# !/.config/nvim/
+# !/.config/nvim/**
