@@ -25,6 +25,9 @@
 # Directories must be re-included at every level before their contents can be.
 !/.config/
 /.config/*
+!/.config/shell/
+!/.config/shell/**
+
+# Example for another app:
 # !/.config/nvim/
 # !/.config/nvim/**
-!/.config/.gitkeep

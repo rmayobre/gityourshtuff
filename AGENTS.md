@@ -18,6 +18,7 @@ Keep it minimal: templated file structure, as little scripting as possible.
 |------|---------|
 | `.shtuff/` | shtuff framework submodule, pinned to a release tag (not `main`). Do not edit; bump by checking out a newer tag. |
 | `.bashrc`, `.zshrc`, `.profile` | Shell startup files that source `.shtuff/shtuff.sh`. |
+| `.config/shell/` | `env.sh`, `aliases.sh`, `functions.sh` shared by bash and zsh; sourced from the rc files (env also from `.profile`). |
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
 | `README.md` | Install instructions (bare repo + worktree). |

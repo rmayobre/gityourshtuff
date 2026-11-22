@@ -61,6 +61,12 @@ anywhere inside `$HOME` that isn't another repo.
 > `git checkout -f` overwrites files in `$HOME` with the repo's versions, which is why step 1
 > backs them up.
 
+## Shell config
+
+Aliases, functions and variables live in `.config/shell/` (`aliases.sh`, `functions.sh`, `env.sh`)
+and are sourced by both `.bashrc` and `.zshrc`, so they're shared between bash and zsh.
+Keep them POSIX-compatible; put shell-specific code in the rc files.
+
 ## Adding files
 
 `.gitignore` is a whitelist: everything is ignored unless allowed. To track a new file:
