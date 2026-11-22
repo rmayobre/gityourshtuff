@@ -57,7 +57,7 @@ under zsh.
 
 `.gitignore` is a whitelist. The `.config/shell/` directory is already allowed, so new
 files placed inside it are tracked once you `git add` them. For files outside it, see
-[Whitelisting files](index.md).
+[Whitelisting files](whitelisting.md).
 
 ## Troubleshooting
 
