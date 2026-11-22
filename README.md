@@ -1,4 +1,4 @@
-# dotshtuff
+# GitYourShtuff
 
 A template for your dotfiles, built with the [shtuff](https://github.com/rmayobre/shtuff)
 shell framework (included as a git submodule in `.shtuff/`).
@@ -10,56 +10,42 @@ Your home directory *is* the checkout, with no symlinks or copy scripts. A white
 ## Use as your own
 
 1. Click **Use this template** (or fork) on GitHub to create your own dotfiles repo.
-2. Replace the placeholders (`.gitconfig`, shell files) with your own.
-3. Follow the install steps below on each machine, using your repo's URL.
+2. Replace the placeholders (`.gitconfig`, shell files) with your own and push.
+3. Run the installer below on each machine, using your repo's URL.
 
 ## Install
 
-Set your repo URL and pick a location for the bare repo:
+Run this on any machine, replacing `<user>` and `<repo>` with your GitHub user and
+dotfiles repo:
 
 ```bash
-DOTFILES_URL=https://github.com/<you>/<your-dotfiles>.git
-DOTFILES_GIT="$HOME/.dotfiles.git"
+curl -fsSL https://raw.githubusercontent.com/<user>/<repo>/main/install.sh \
+  | DOTFILES_URL=https://github.com/<user>/<repo>.git bash
 ```
 
-**1. Back up existing dotfiles** that the repo will overwrite (check the repo's file list):
+The installer:
+
+1. Clones your repo as a bare repo at `~/.dotfiles.git`.
+2. Adds a git worktree rooted at `$HOME` (so your home directory *is* the checkout).
+3. Moves any existing files it would overwrite to `~/.dotfiles-backup/<timestamp>/`.
+4. Checks out your files and initializes the shtuff submodule.
+
+Open a new shell afterwards. Day-to-day, `git status`, `git add`, `git commit` and
+`git push` work from anywhere inside `$HOME` that isn't another repo.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DOTFILES_URL` | _(required)_ | Repo to clone |
+| `DOTFILES_GIT` | `~/.dotfiles.git` | Bare repo location |
+| `DOTFILES_REF` | `main` | Branch to check out |
+
+Prefer to read it first? Download and inspect before running:
 
 ```bash
-mkdir -p ~/.dotfiles-backup
-mv ~/.bashrc ~/.zshrc ~/.profile ~/.gitconfig ~/.dotfiles-backup/ 2>/dev/null
+curl -fsSL https://raw.githubusercontent.com/<user>/<repo>/main/install.sh -o install.sh
+less install.sh
+DOTFILES_URL=https://github.com/<user>/<repo>.git bash install.sh
 ```
-
-**2. Clone as a bare repo** (including submodules is done in step 4):
-
-```bash
-git clone --bare "$DOTFILES_URL" "$DOTFILES_GIT"
-```
-
-**3. Add a worktree at `$HOME`.** `git worktree add` refuses a non-empty directory, so create
-the worktree elsewhere without a checkout and move its `.git` link into `$HOME`:
-
-```bash
-tmp=$(mktemp -d)
-git --git-dir="$DOTFILES_GIT" worktree add --no-checkout "$tmp/wt" main
-mv "$tmp/wt/.git" "$HOME/.git"
-rmdir "$tmp/wt" "$tmp"
-git --git-dir="$DOTFILES_GIT" worktree repair "$HOME"
-```
-
-**4. Check out the files and the shtuff submodule:**
-
-```bash
-cd ~
-git config status.showUntrackedFiles no   # optional: quiet status in $HOME
-git checkout -f main
-git submodule update --init --recursive
-```
-
-Open a new shell. Day-to-day, `git status`, `git add`, `git commit`, and `git push` work from
-anywhere inside `$HOME` that isn't another repo.
-
-> `git checkout -f` overwrites files in `$HOME` with the repo's versions, which is why step 1
-> backs them up.
 
 ## Shell config
 

@@ -1,4 +1,4 @@
-# AGENTS.md — dotshtuff
+# AGENTS.md — GitYourShtuff
 
 Guidance for AI agents working in this repository.
 
@@ -21,7 +21,8 @@ Keep it minimal: templated file structure, as little scripting as possible.
 | `.config/shell/` | `env.sh`, `aliases.sh`, `functions.sh` shared by bash and zsh; sourced from the rc files (env also from `.profile`). |
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
-| `README.md` | Install instructions (bare repo + worktree). |
+| `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). |
+| `README.md` | Install instructions (the `curl ... \| bash` one-liner). |
 
 ## Branches
 

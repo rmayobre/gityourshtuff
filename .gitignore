@@ -5,6 +5,7 @@
 # Repo metadata
 !/.gitignore
 !/.gitmodules
+!/install.sh
 !/README.md
 !/LICENSE
 !/AGENTS.md
