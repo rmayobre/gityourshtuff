@@ -1,12 +1,13 @@
 # Updating
 
-`scripts/update.sh` pulls your latest dotfiles and keeps submodules in step. It lives in your
-home directory after install, in `~/scripts/`.
+`gys-update` pulls your latest dotfiles and keeps submodules in step. It lives in
+`~/.local/bin`, which is on your `PATH` once `env.sh` has loaded, so open a new shell after
+installing and run it from anywhere.
 
 ```bash
-~/scripts/update.sh                     # pull, then sync submodules to the pinned commits
-~/scripts/update.sh --latest            # also move submodules to their newest stable release tag
-~/scripts/update.sh --latest --commit   # ...and commit the bump
+gys-update                     # pull, then sync submodules to the pinned commits
+gys-update --latest            # also move submodules to their newest stable release tag
+gys-update --latest --commit   # ...and commit the bump
 ```
 
 ## What it does
@@ -34,12 +35,33 @@ home directory after install, in `~/scripts/`.
   step, so review the release notes before you commit a bump.
 - A fast-forward pull fails if your local branch has diverged from `origin`. Resolve that with
   `git pull --rebase` or a merge, then run the script again.
-- Scripts in `scripts/` load [shtuff](https://github.com/rmayobre/shtuff) through
-  `scripts/common.sh`. They log with its `info`, `warn` and `error` functions and show progress for network steps with its `monitor` spinner (through `run_monitored` in `common.sh`). `common.sh` adds only
-  helpers specific to this repo (`repo_root`, `has_tracked_changes`, `latest_stable_tag`, `run_monitored`). Source it
-  from your own scripts, and put new helper scripts in `scripts/`. `.gitignore` already allows
-  everything under `scripts/`.
-- If the shtuff submodule is missing, the script tells you to run `git submodule update --init`.
-- Every script in `scripts/` should do the same. The only scripts that don't use shtuff are the
-  installer (it runs before shtuff is on the machine) and the shell files that login shells read
-  (`.profile`, `.zprofile`, `.config/shell/env.sh`).
+## Where things live
+
+| Path | Holds |
+|------|-------|
+| `~/.local/bin/` | Commands, prefixed `gys-` so they don't clash with shtuff functions such as `update` and `install` |
+| `~/.local/share/gityourshtuff/common.sh` | Shared setup that every command sources |
+| `~/.local/share/shtuff/` | The shtuff framework (git submodule, pinned to a release tag) |
+
+Everything else under `~/.local` is ignored by the whitelist `.gitignore`, so other tools' data
+stays out of your repo.
+
+## Writing your own commands
+
+- Put new commands in `~/.local/bin/` with a `gys-` prefix, and make them executable. The
+  whitelist already allows everything in that directory.
+- Source the shared helpers at the top of each command:
+
+  ```bash
+  source "$(dirname "${BASH_SOURCE[0]}")/../share/gityourshtuff/common.sh"
+  ```
+
+- `common.sh` loads [shtuff](https://github.com/rmayobre/shtuff). Log with its `info`, `warn` and
+  `error` functions, and show progress for network steps with its `monitor` spinner through
+  `run_monitored`. `common.sh` adds only helpers specific to this repo (`repo_root`,
+  `has_tracked_changes`, `latest_stable_tag`, `run_monitored`).
+- shtuff's `error` doesn't exit, so follow it with `exit 1`.
+- If the shtuff submodule is missing, commands tell you to run `git submodule update --init`.
+- The only files that don't use shtuff are the installer (it runs before shtuff is on the
+  machine) and the shell files that login shells read (`.profile`, `.zprofile`,
+  `.config/shell/env.sh`).

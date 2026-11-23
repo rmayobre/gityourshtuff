@@ -12,7 +12,7 @@ by bash and zsh.
 ## How loading works
 
 Neither bash nor zsh reads these files by itself. `.bashrc` and `.zshrc` each source
-`.shtuff/shtuff.sh`, then loop over `env`, `aliases` and `functions` and source
+`.local/share/shtuff/shtuff.sh`, then loop over `env`, `aliases` and `functions` and source
 `~/.config/shell/<name>.sh` if it exists. `.profile` sources `env.sh` for login shells,
 so variables are available before `.bashrc` runs.
 
