@@ -50,12 +50,8 @@ dot worktree repair "$HOME"
 
 cd "$HOME"
 
-# Keep repo-only files (README, LICENSE, ...) out of $HOME with a sparse checkout.
-excluded() {
-    local x
-    for x in $DOTFILES_EXCLUDE; do [ "$1" = "$x" ] && return 0; done
-    return 1
-}
+# Keep repo-only files (README, LICENSE, ...) out of $HOME with a sparse checkout. Set before
+# the checkout so they are never written.
 if [ -n "$DOTFILES_EXCLUDE" ]; then
     log "Excluding from checkout: $DOTFILES_EXCLUDE"
     {
@@ -64,9 +60,9 @@ if [ -n "$DOTFILES_EXCLUDE" ]; then
     } | git sparse-checkout set --no-cone --stdin
 fi
 
-# Back up any existing files the checkout would overwrite (skipping excluded ones).
+# Back up any existing file that shares a path with a repo file, including excluded ones: a
+# leftover ~/README.md would otherwise show up as a modification of the repo's README.md.
 while IFS= read -r -d '' f; do
-    excluded "$f" && continue
     if [ -e "$f" ] || [ -L "$f" ]; then
         mkdir -p "$BACKUP_DIR/$(dirname "$f")"
         mv "$f" "$BACKUP_DIR/$f"
@@ -77,11 +73,6 @@ done < <(git ls-tree -r -z --name-only HEAD)
 log "Checking out $DOTFILES_REF"
 git config status.showUntrackedFiles no
 git checkout -f "$DOTFILES_REF"
-# A file of yours that shares a name with an excluded repo file (say ~/README.md) stays in place;
-# tell git to ignore it so it doesn't show as modified.
-for x in $DOTFILES_EXCLUDE; do
-    [ -e "$x" ] && git update-index --skip-worktree "$x"
-done
 git submodule update --init --recursive
 
 log "Done. Open a new shell to load your dotfiles."
