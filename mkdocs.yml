@@ -11,9 +11,13 @@ theme:
 
 nav:
   - Introduction: index.md
+  - Creating your own repo: templating.md
   - Installation: install.md
   - Shell configuration: shell-config.md
   - Whitelisting files: whitelisting.md
 
 plugins:
   - search
+
+markdown_extensions:
+  - admonition

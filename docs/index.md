@@ -6,6 +6,7 @@ worktree of a bare repository, and a whitelist `.gitignore` tracks only the file
 
 ## Contents
 
+- [Creating your own repo](templating.md): start from the template before installing
 - [Installation](install.md): one-command remote install (bare repo + worktree)
 - [Shell configuration](shell-config.md): aliases, functions and variables
 - [Whitelisting files](whitelisting.md): track new files and directories
