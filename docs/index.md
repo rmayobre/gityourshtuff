@@ -10,5 +10,6 @@ worktree of a bare repository, and a whitelist `.gitignore` tracks only the file
 - [Installation](install.md): one-command remote install (bare repo + worktree)
 - [Shell configuration](shell-config.md): aliases, functions and variables
 - [Whitelisting files](whitelisting.md): track new files and directories
+- [Publishing the docs site](publishing.md): build and deploy this manual with GitHub Actions
 - [shtuff framework](https://github.com/rmayobre/shtuff): the underlying shell library
 

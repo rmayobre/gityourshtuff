@@ -72,7 +72,11 @@ gh api repos/<user>/<repo>/contents/install.sh -H "Accept: application/vnd.githu
 DOTFILES_URL=git@github.com:<user>/<repo>.git bash install.sh
 ```
 
-## 4. Keep it up to date
+## 4. Publish the docs (optional)
+
+To host this manual for your own repo, see [Publishing the docs site](publishing.md).
+
+## 5. Keep it up to date
 
 Edit files in your home directory as usual and commit from there. The shtuff framework is
 pinned to a release tag. To move to a newer release:
