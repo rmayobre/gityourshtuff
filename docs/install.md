@@ -1,5 +1,10 @@
 # Installation
 
+!!! warning "This repository is a template"
+    `rmayobre/gityourshtuff` is a template, not a dotfiles repo you install directly. Your
+    dotfiles live in your own copy of it, so create one first and use *its* URL in the
+    commands below. See [Creating your own dotfiles repo](templating.md).
+
 GitYourShtuff installs as a bare repo plus a git worktree rooted at `$HOME`, using a single
 remote command. Replace `<user>` and `<repo>` with your GitHub user and dotfiles repo:
 
