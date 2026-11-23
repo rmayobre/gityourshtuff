@@ -72,16 +72,19 @@ For a directory, re-include each level:
 
 Then `git add .vimrc .gitignore && git commit`. Check with `git check-ignore -v <path>`.
 
-## Updating shtuff
+## Updating
 
-The submodule is pinned to a release tag (currently `v1.3.3`), not `main`. To move to a
-newer release:
+Pull your latest changes and sync the submodules with the update script:
 
 ```bash
-git -C .shtuff fetch --tags
-git -C .shtuff checkout <new-tag>   # e.g. v1.4.0
-git add .shtuff && git commit -m "Bump shtuff to <new-tag>"
+~/scripts/update.sh                     # pull, then sync submodules to the pinned commits
+~/scripts/update.sh --latest            # also move submodules to their newest stable release tag
+~/scripts/update.sh --latest --commit   # ...and commit the bump
 ```
+
+The shtuff submodule is pinned to a release tag (not `main`). `--latest` fetches tags, checks
+out the newest stable `vX.Y.Z` tag (ignoring betas) and stages the change. The script refuses
+to run with uncommitted changes to tracked files.
 
 ## Extra worktrees
 

@@ -22,6 +22,7 @@ Keep it minimal: templated file structure, as little scripting as possible.
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
 | `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). |
+| `scripts/` | Helper scripts run after install. `common.sh` holds shared helpers (`log`, `die`, ...); source it rather than duplicating logic. `update.sh` pulls and updates submodules. New scripts are already allowed in `.gitignore` (`!/scripts/**`). |
 | `README.md` | Install instructions (the `curl ... \| bash` one-liner). |
 
 ## Branches
