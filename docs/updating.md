@@ -34,6 +34,9 @@ home directory after install, in `~/scripts/`.
   step, so review the release notes before you commit a bump.
 - A fast-forward pull fails if your local branch has diverged from `origin`. Resolve that with
   `git pull --rebase` or a merge, then run the script again.
-- Shared helpers (`log`, `die`, tag lookup) live in `scripts/common.sh`. Source that file from
-  your own scripts instead of repeating the logic, and put new helper scripts in `scripts/`.
-  `.gitignore` already allows everything under `scripts/`.
+- Scripts in `scripts/` load [shtuff](https://github.com/rmayobre/shtuff) through
+  `scripts/common.sh` and log with its `info`, `warn` and `error` functions. `common.sh` adds only
+  helpers specific to this repo (`repo_root`, `has_tracked_changes`, `latest_stable_tag`). Source it
+  from your own scripts, and put new helper scripts in `scripts/`. `.gitignore` already allows
+  everything under `scripts/`.
+- If the shtuff submodule is missing, the script tells you to run `git submodule update --init`.
