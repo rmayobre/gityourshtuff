@@ -34,20 +34,18 @@ if has_tracked_changes "$ROOT"; then
     exit 1
 fi
 
-info "Pulling latest changes"
 # Pull by branch name: a bare-clone install has no upstream or fetch refspec configured.
 branch="$(git symbolic-ref --short -q HEAD || true)"
 [ -n "$branch" ] || { error "detached HEAD; check out a branch first"; exit 1; }
-git pull --ff-only origin "$branch"
+run_monitored "Pulling $branch" git pull --ff-only origin "$branch" || exit 1
 
-info "Syncing submodules"
 git submodule sync --recursive >/dev/null
-git submodule update --init --recursive
+run_monitored "Syncing submodules" git submodule update --init --recursive || exit 1
 
 if $LATEST; then
     git submodule foreach --quiet 'echo "$sm_path"' | while IFS= read -r sm; do
         [ -n "$sm" ] || continue
-        git -C "$sm" fetch --quiet --tags origin
+        run_monitored "Fetching $sm tags" git -C "$sm" fetch --quiet --tags origin || exit 1
         tag="$(latest_stable_tag "$sm")"
         if [ -z "$tag" ]; then
             warn "$sm: no stable release tags found; leaving it as is"

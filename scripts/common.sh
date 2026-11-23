@@ -31,3 +31,20 @@ latest_stable_tag() {
     git -C "$1" tag --list 'v[0-9]*' --sort=-v:refname \
         | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1
 }
+
+# run_monitored MESSAGE CMD [ARGS...]: run CMD in the background under shtuff's `monitor`
+# spinner. CMD's output is captured and shown with `error` only if it fails.
+# Returns CMD's exit status.
+run_monitored() {
+    local message="$1" out status
+    shift
+    out="$(mktemp)"
+    "$@" >"$out" 2>&1 &
+    monitor $! --message "$message" --success_msg "$message: done" --error_msg "$message: failed" \
+        && status=0 || status=$?
+    if [ "$status" -ne 0 ] && [ -s "$out" ]; then
+        error "$(cat "$out")"
+    fi
+    rm -f "$out"
+    return "$status"
+}
