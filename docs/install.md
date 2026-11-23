@@ -18,9 +18,12 @@ curl -fsSL https://raw.githubusercontent.com/<user>/<repo>/main/install.sh \
 1. Clones your repo as a bare repo at `~/.dotfiles.git`.
 2. Adds a worktree rooted at `$HOME`.
 3. Moves existing files it would overwrite to `~/.dotfiles-backup/<timestamp>/`.
-4. Checks out your files and initializes the shtuff submodule.
+4. Checks out your files and initializes the shtuff submodule. A sparse checkout keeps the
+   repo-only files (`README.md`, `LICENSE`, `AGENTS.md`, `CLAUDE.md`, `install.sh`) out of your
+   home directory. They stay in the repo.
 
-Open a new shell afterwards.
+Open a new shell afterwards and run `dot-init` to set your git identity and `origin` (see
+[Creating your own repo](templating.md)).
 
 ## Options
 
@@ -29,6 +32,7 @@ Open a new shell afterwards.
 | `DOTFILES_URL` | _(required)_ | Repo to clone |
 | `DOTFILES_GIT` | `~/.dotfiles.git` | Bare repo location |
 | `DOTFILES_REF` | `main` | Branch to check out |
+| `DOTFILES_EXCLUDE` | `README.md LICENSE AGENTS.md CLAUDE.md install.sh` | Top-level repo files to keep out of `$HOME` (space-separated; empty to check out everything) |
 
 ## Inspect before running
 
@@ -38,9 +42,29 @@ less install.sh
 DOTFILES_URL=https://github.com/<user>/<repo>.git bash install.sh
 ```
 
+## Repo-only files
+
+The sparse checkout means your home directory doesn't get a `README.md`, `LICENSE`, `AGENTS.md`,
+`CLAUDE.md` or `install.sh` at its top level. They're still in your repo, and a normal
+`git pull` or commit never touches them.
+
+```bash
+git sparse-checkout list       # show the patterns in use
+git show HEAD:README.md        # read an excluded file without checking it out
+git sparse-checkout disable    # check out everything
+```
+
+To change what's excluded, set `DOTFILES_EXCLUDE` when you run the installer. An empty value
+checks out everything. If you already have a file at one of these paths in your home directory,
+such as your own `~/README.md`, the installer moves it to the backup directory so it doesn't
+appear as a change to the repo's copy.
+
 ## Troubleshooting
 
 - **`~/.dotfiles.git already exists`:** a previous install ran. Remove it, or set
   `DOTFILES_GIT` to another path.
 - **`~/.git already exists`:** `$HOME` is already a repository; the installer won't overwrite it.
-- **Restoring old files:** copy them back from `~/.dotfiles-backup/<timestamp>/`.
+- **Something looks wrong:** run `dot-doctor`; see [Troubleshooting](troubleshooting.md).
+- **Undoing the install:** see [Uninstalling](uninstall.md).
+- **Restoring old files:** run `dot-restore <timestamp>`, or copy them back by hand from
+  `~/.dotfiles-backup/<timestamp>/`. See [Backup and restore](backup-restore.md).

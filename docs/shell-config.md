@@ -11,9 +11,8 @@ by bash and zsh.
 
 ## How loading works
 
-Neither bash nor zsh reads these files by itself. `.bashrc` and `.zshrc` each source
-`.shtuff/shtuff.sh`, then loop over `env`, `aliases` and `functions` and source
-`~/.config/shell/<name>.sh` if it exists. `.profile` sources `env.sh` for login shells,
+Neither bash nor zsh reads these files by itself. `.bashrc` and `.zshrc` each loop over `env`,
+`aliases` and `functions` and source `~/.config/shell/<name>.sh` if it exists. `.profile` sources `env.sh` for login shells,
 so variables are available before `.bashrc` runs.
 
 Changes take effect in new shells. To apply them to the current one:
@@ -50,8 +49,22 @@ These files are sourced by both shells, so stick to POSIX syntax. Avoid bash-onl
 features (`[[ ]]`, arrays, `function name {}`) and zsh-only features here. Put
 shell-specific code directly in `.bashrc` or `.zshrc`.
 
-shtuff is a Bash framework, so its functions (`info`, `warn`, `install`, ...) may not work
-under zsh.
+## shtuff in your shell
+
+Your interactive shells don't load [shtuff](https://github.com/rmayobre/shtuff). Loading it costs
+startup time (about 20 ms against about 2 ms for a bare bash, measured on one machine), and it
+defines roughly 125 functions, among them `install`, `update`, `clean`, `copy`, `move` and
+`delete`, which would shadow system commands of the same name. The `dot-*` commands load shtuff
+themselves, so they don't need it in your shell.
+
+To use shtuff's functions interactively, run this in a bash session:
+
+```bash
+use_shtuff
+```
+
+It loads shtuff into the current shell only. To load it in every new bash shell anyway, add
+`use_shtuff` to `~/.bashrc`. shtuff is a Bash framework, so `use_shtuff` refuses to run under zsh.
 
 ## Adding more files
 

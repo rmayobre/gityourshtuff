@@ -15,6 +15,11 @@ nav:
   - Installation: install.md
   - Shell configuration: shell-config.md
   - Whitelisting files: whitelisting.md
+  - Updating: updating.md
+  - Backup and restore: backup-restore.md
+  - Troubleshooting: troubleshooting.md
+  - Uninstalling: uninstall.md
+  - macOS: macos.md
   - Publishing the docs site: publishing.md
 
 plugins:
