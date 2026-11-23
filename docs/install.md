@@ -63,5 +63,7 @@ appear as a change to the repo's copy.
 - **`~/.dotfiles.git already exists`:** a previous install ran. Remove it, or set
   `DOTFILES_GIT` to another path.
 - **`~/.git already exists`:** `$HOME` is already a repository; the installer won't overwrite it.
+- **Something looks wrong:** run `dot-doctor`; see [Troubleshooting](troubleshooting.md).
+- **Undoing the install:** see [Uninstalling](uninstall.md).
 - **Restoring old files:** run `dot-restore <timestamp>`, or copy them back by hand from
   `~/.dotfiles-backup/<timestamp>/`. See [Backup and restore](backup-restore.md).
