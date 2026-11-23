@@ -97,3 +97,25 @@ snapshot_dotfiles() {
     } >"$dest/MANIFEST.txt"
     rm -f "$list"
 }
+
+# restore_snapshot SRC ROOT: copy every file from the backup folder SRC into ROOT (keeping
+# paths and permissions), except SRC/MANIFEST.txt. Same tar pipe as snapshot_dotfiles.
+restore_snapshot() {
+    tar -C "$1" --exclude ./MANIFEST.txt -cf - . | tar -C "$2" -xf -
+}
+
+# is_sensitive PATH: succeeds if a root-relative PATH looks like a secret (keys, credentials,
+# env files). Public keys (*.pub) are fine.
+is_sensitive() {
+    case "$1" in
+        *.pub) return 1 ;;
+        .ssh/*|.gnupg/*|.aws/*|.azure/*|.kube/*|.docker/config.json) return 0 ;;
+        .netrc|.git-credentials|.npmrc|.pypirc|.env|.env.*|*/.env|*/.env.*) return 0 ;;
+        *id_rsa*|*id_dsa*|*id_ecdsa*|*id_ed25519*) return 0 ;;
+        *.pem|*.key|*.p12|*.pfx|*.keystore|*.kdbx) return 0 ;;
+    esac
+    return 1
+}
+
+# Extended regex for secrets inside files: private key blocks and common token formats.
+SECRET_PATTERN='-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}'

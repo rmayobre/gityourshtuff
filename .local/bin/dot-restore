@@ -96,7 +96,7 @@ safety="$BACKUPS/$(date +%Y%m%d-%H%M%S)-pre-restore"
 run_monitored "Saving current state first" snapshot_dotfiles "$safety" || exit 1
 info "Current state saved to $safety"
 
-restore_files() { tar -C "$SRC" --exclude ./MANIFEST.txt -cf - . | tar -C "$ROOT" -xf -; }
+restore_files() { restore_snapshot "$SRC" "$ROOT"; }
 run_monitored "Restoring files" restore_files || exit 1
 
 info "Restored $total files from ${SRC##*/}"

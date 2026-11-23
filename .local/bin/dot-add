@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# Start tracking files or directories: adds the whitelist rules to .gitignore (re-including
+# every parent directory) and stages the result.
+#
+# Usage: dot-add [--dry-run] [--force] PATH...
+#
+#   --dry-run  Show the .gitignore rules that would be added and stop.
+#   --force    Track paths that look like secrets (keys, credentials, .env files).
+#
+# PATH is a file or directory inside your home directory, e.g. ~/.vimrc or ~/.config/nvim.
+# Nothing is committed; review with "git status" and commit when ready.
+set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
+
+DRY=false
+FORCE=false
+PATHS=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dry-run) DRY=true ;;
+        --force) FORCE=true ;;
+        -h|--help) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --) shift; PATHS+=("$@"); break ;;
+        -*) error "unknown option: $1 (try --help)"; exit 1 ;;
+        *) PATHS+=("$1") ;;
+    esac
+    shift
+done
+[ "${#PATHS[@]}" -gt 0 ] || { error "give at least one path (try --help)"; exit 1; }
+
+command -v git >/dev/null || { error "git is required"; exit 1; }
+START="$PWD"
+ROOT="$(cd "$(repo_root)" && pwd -P)"
+cd "$ROOT"
+IGNORE="$ROOT/.gitignore"
+[ -f "$IGNORE" ] || { error "$IGNORE not found; is this a GitYourShtuff checkout?"; exit 1; }
+
+# escape_rule TEXT: escape characters that are special in a .gitignore pattern.
+escape_rule() { printf '%s' "$1" | sed 's/[][*?\\]/\\&/g'; }
+
+# rel_path PATH: print PATH relative to ROOT, with symlinks in parent directories resolved.
+rel_path() {
+    local p="$1" dir base abs
+    case "$p" in /*) ;; *) p="$START/$p" ;; esac
+    dir="$(dirname "$p")"; base="$(basename "$p")"
+    [ -d "$dir" ] || return 1
+    abs="$(cd "$dir" && pwd -P)/$base"
+    case "$abs" in
+        "$ROOT"/*) printf '%s\n' "${abs#"$ROOT"/}" ;;
+        *) return 1 ;;
+    esac
+}
+
+RULES=()
+queue_rule() {
+    local r="$1" q
+    grep -Fxq -- "$r" "$IGNORE" && return 0
+    for q in ${RULES[@]+"${RULES[@]}"}; do [ "$q" = "$r" ] && return 0; done
+    RULES+=("$r")
+}
+
+# is_allowed REL: succeeds if the whitelist already lets git see REL.
+is_allowed() {
+    if [ -d "$1" ] && [ ! -L "$1" ]; then
+        [ -n "$(git ls-files --cached --others --exclude-standard -- "$1" | head -n 1)" ]
+    else
+        ! git check-ignore -q -- "$1"
+    fi
+}
+
+TARGETS=()
+for arg in "${PATHS[@]}"; do
+    case "$arg" in /*) full="$arg" ;; *) full="$START/$arg" ;; esac
+    [ -e "$full" ] || [ -L "$full" ] || { error "no such file or directory: $arg"; exit 1; }
+    rel="$(rel_path "$arg")" || { error "$arg is outside your home directory ($ROOT)"; exit 1; }
+    case "$rel" in
+        .git|.git/*|.dotfiles.git|.dotfiles.git/*|.dotfiles-backup|.dotfiles-backup/*)
+            error "$rel is repository or backup data and can't be tracked"; exit 1 ;;
+        .local/share/shtuff|.local/share/shtuff/*)
+            error "$rel is the shtuff submodule; update it with dot-update instead"; exit 1 ;;
+    esac
+    if [ -d "$rel" ] && [ ! -L "$rel" ] && [ -e "$rel/.git" ]; then
+        error "$rel is its own git repository; track its files individually or add it as a submodule"
+        exit 1
+    fi
+    if ! $FORCE; then
+        if is_sensitive "$rel"; then
+            error "$rel looks like a secret; use --force if you really want it in your repo"
+            exit 1
+        fi
+        if [ -f "$rel" ] && grep -IqE -e "$SECRET_PATTERN" -- "$rel" 2>/dev/null; then
+            error "$rel contains what looks like a private key or token; use --force to track it anyway"
+            exit 1
+        fi
+        if [ -d "$rel" ]; then
+            while IFS= read -r -d '' f; do
+                if is_sensitive "$f" || grep -IqE -e "$SECRET_PATTERN" -- "$f" 2>/dev/null; then
+                    error "$f looks like a secret; use --force to track it anyway"
+                    exit 1
+                fi
+            done < <(find "$rel" -type f ! -path '*/.git/*' -print0)
+        fi
+    fi
+    TARGETS+=("$rel")
+done
+
+# Build the rules: re-include each parent directory (and re-ignore its other contents), then
+# the target itself. Rules already in .gitignore are skipped.
+for rel in "${TARGETS[@]}"; do
+    if is_allowed "$rel"; then
+        info "$rel is already allowed by .gitignore"
+        continue
+    fi
+    IFS=/ read -r -a parts <<<"$rel"
+    prefix=""
+    last=$(( ${#parts[@]} - 1 ))
+    for ((i = 0; i < last; i++)); do
+        prefix="$prefix/$(escape_rule "${parts[i]}")"
+        queue_rule "!$prefix/"
+        queue_rule "$prefix/*"
+    done
+    name="$(escape_rule "${parts[last]}")"
+    if [ -d "$rel" ] && [ ! -L "$rel" ]; then
+        queue_rule "!$prefix/$name/"
+        queue_rule "!$prefix/$name/**"
+    else
+        queue_rule "!$prefix/$name"
+    fi
+done
+
+if [ "${#RULES[@]}" -gt 0 ]; then
+    info "Rules to add to .gitignore:"
+    printf '  %s\n' "${RULES[@]}"
+    $DRY && exit 0
+    original="$(mktemp)"
+    cp "$IGNORE" "$original"
+    {
+        [ -n "$(tail -c1 "$IGNORE")" ] && echo
+        echo
+        echo "# Added by dot-add"
+        printf '%s\n' "${RULES[@]}"
+    } >>"$IGNORE"
+else
+    $DRY && { info "Nothing to add"; exit 0; }
+    original=""
+fi
+
+# Stage the .gitignore change and the targets; roll back the rules if git still refuses.
+if ! git add -- .gitignore "${TARGETS[@]}" 2>/dev/null; then
+    [ -n "$original" ] && cp "$original" "$IGNORE"
+    git reset -q -- .gitignore 2>/dev/null || true
+    error "git still ignores one of these paths; .gitignore was left unchanged. Check: git check-ignore -v <path>"
+    exit 1
+fi
+for rel in "${TARGETS[@]}"; do
+    if [ -z "$(git ls-files -- "$rel" | head -n 1)" ]; then
+        warn "$rel was allowed but contains no files to track yet (git doesn't track empty directories)"
+    else
+        info "Tracking $rel ($(git ls-files -- "$rel" | wc -l | tr -d ' ') file(s) staged)"
+    fi
+done
+[ -z "${original:-}" ] || rm -f "$original"
+info "Review with 'git status', then commit and push"
