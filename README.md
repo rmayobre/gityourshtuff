@@ -88,13 +88,13 @@ Pull your latest changes and sync the submodules with the update command (`~/.lo
 `PATH` once `env.sh` has loaded, so open a new shell after installing):
 
 ```bash
-gys-update                     # pull, then sync submodules to the pinned commits
-gys-update --latest            # also move submodules to their newest stable release tag
-gys-update --latest --commit   # ...and commit the bump
+dot-update                     # pull, then sync submodules to the pinned commits
+dot-update --latest            # also move submodules to their newest stable release tag
+dot-update --latest --commit   # ...and commit the bump
 ```
 
-Commands live in `~/.local/bin` (prefixed `gys-`) and shared helpers in
-`~/.local/share/gityourshtuff/`. The shtuff submodule is pinned to a release tag (not `main`). `--latest` fetches tags, checks
+Commands live in `~/.local/bin` (prefixed `dot-`) and shared helpers in
+`~/.local/share/dotfiles/`. The shtuff submodule is pinned to a release tag (not `main`). `--latest` fetches tags, checks
 out the newest stable `vX.Y.Z` tag (ignoring betas) and stages the change. The script refuses
 to run with uncommitted changes to tracked files.
 

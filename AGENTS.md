@@ -22,8 +22,8 @@ Keep it minimal: templated file structure, as little scripting as possible.
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
 | `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). |
-| `.local/bin/` | Commands, prefixed `gys-` so they don't clash with shtuff functions (`update`, `install`, ...). `gys-update` pulls and updates submodules. New commands are already allowed in `.gitignore` (`!/.local/bin/**`). |
-| `.local/share/gityourshtuff/` | `common.sh`: loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`) plus `run_monitored`, a thin wrapper that runs a command under shtuff's `monitor` spinner. Source it from every command. Don't add logging or other generic utilities there; shtuff already provides them. |
+| `.local/bin/` | Commands, prefixed `dot-` so they don't clash with shtuff functions (`update`, `install`, ...). `dot-update` pulls and updates submodules. New commands are already allowed in `.gitignore` (`!/.local/bin/**`). |
+| `.local/share/dotfiles/` | `common.sh`: loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`) plus `run_monitored`, a thin wrapper that runs a command under shtuff's `monitor` spinner. Source it from every command. Don't add logging or other generic utilities there; shtuff already provides them. |
 | `README.md` | Install instructions (the `curl ... \| bash` one-liner). |
 
 ## Branches
@@ -38,7 +38,7 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
 **Any new tracked file or directory must be explicitly allowed with a `!` rule.**
 
 - Allow a top-level file: `!/.vimrc`
-- Under `.local/`, only `bin/`, `share/gityourshtuff/` and `share/shtuff` are allowed; the rest
+- Under `.local/`, only `bin/`, `share/dotfiles/` and `share/shtuff` are allowed; the rest
   of `.local` (other tools' data) must stay ignored.
 - Allow a directory: re-include each level, e.g. `!/.config/`, `/.config/*`,
   then `!/.config/nvim/` and `!/.config/nvim/**`.
@@ -51,7 +51,7 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
 - Source `shtuff.sh` locally from the submodule; do not use the remote variant in dotfiles.
 - Use shtuff functions (`info`, `warn`, `error`, `confirm`, `install`, ...) rather than reimplementing. Commands in `.local/bin/` log with these, never with `echo`/`printf`; shtuff's `error` doesn't exit, so follow it with `exit 1`.
   See `.local/share/shtuff/AGENTS.md` for the API.
-- **Every command in `.local/bin/` must source `.local/share/gityourshtuff/common.sh` (which loads shtuff)** and use
+- **Every command in `.local/bin/` must source `.local/share/dotfiles/common.sh` (which loads shtuff)** and use
   shtuff for logging, prompts (`confirm`, ...), file operations (`copy`, `move`, `delete`) and
   long-running or network steps (`run_monitored`, which wraps `monitor`).
 - The only exceptions are `install.sh` (it runs via `curl` before the repo or shtuff exist)

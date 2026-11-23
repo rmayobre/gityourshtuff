@@ -19,8 +19,8 @@
 !/.local/bin/**
 !/.local/share/
 /.local/share/*
-!/.local/share/gityourshtuff/
-!/.local/share/gityourshtuff/**
+!/.local/share/dotfiles/
+!/.local/share/dotfiles/**
 !/.local/share/shtuff
 
 # Shell
