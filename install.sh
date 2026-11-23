@@ -20,6 +20,14 @@ log() { printf '==> %s\n' "$*"; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 command -v git >/dev/null || die "git is required"
+# On macOS /usr/bin/git exists before the Command Line Tools do, and fails when run.
+git --version >/dev/null 2>&1 || die "git is not usable; on macOS run: xcode-select --install"
+# 'git worktree repair' needs git 2.30+.
+git_ver="$(git --version | sed -n 's/^git version \([0-9]*\)\.\([0-9]*\).*/\1 \2/p')"
+set -- $git_ver
+if [ "${1:-0}" -lt 2 ] || { [ "${1:-0}" -eq 2 ] && [ "${2:-0}" -lt 30 ]; }; then
+    die "git 2.30 or newer is required (found $(git --version))"
+fi
 [ -e "$DOTFILES_GIT" ] && die "$DOTFILES_GIT already exists; remove it or set DOTFILES_GIT"
 [ -e "$HOME/.git" ] && die "$HOME/.git already exists; \$HOME is already a repository"
 

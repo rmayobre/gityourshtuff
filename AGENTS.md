@@ -50,6 +50,17 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
   See `.shtuff/AGENTS.md` for the API.
 - Keep shell files POSIX-safe where possible (`.profile`); Bash-only in `.bashrc`.
 
+## Portability (Linux and macOS)
+
+Everything outside `.shtuff/` must run on macOS as well as Linux: bash 3.2 and BSD userland.
+
+- Avoid bash 4+ features (`mapfile`, `declare -A`, `${var,,}`, `&>>`).
+- Avoid GNU-only flags: `sed -i` without a suffix argument, `readlink -f`, `sort -V`,
+  `date -d`, `grep -P`, `xargs -r`. Prefer git's own options (e.g. `--sort=-v:refname`).
+- Login shells matter on macOS: keep `.bash_profile` and `.zprofile` as thin hand-offs to
+  `.profile` and `.config/shell/env.sh`.
+- Don't assume a package manager. shtuff's own macOS support is handled in the shtuff repo.
+
 ## Keeping docs in sync
 
 The `docs` branch is the user manual. Any change on `main` that affects user-facing

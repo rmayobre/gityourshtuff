@@ -47,6 +47,16 @@ less install.sh
 DOTFILES_URL=https://github.com/<user>/<repo>.git bash install.sh
 ```
 
+## macOS
+
+The layout works on macOS as well as Linux:
+
+- The installer checks for a working git 2.30+. If it reports git is unusable, run
+  `xcode-select --install` and try again.
+- Terminal.app starts login shells. `.bash_profile` and `.zprofile` hand off to `.profile` and
+  `env.sh`, so your `PATH` and Homebrew (Apple Silicon or Intel) load in both bash and zsh.
+- Scripts target the bash 3.2 and BSD tools that ship with macOS.
+
 ## Shell config
 
 Aliases, functions and variables live in `.config/shell/` (`aliases.sh`, `functions.sh`, `env.sh`)
