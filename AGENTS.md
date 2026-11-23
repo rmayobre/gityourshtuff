@@ -22,8 +22,8 @@ Keep it minimal: templated file structure, as little scripting as possible.
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
 | `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). A sparse checkout (`DOTFILES_EXCLUDE`) keeps repo-only root files (`README.md`, `LICENSE`, `AGENTS.md`, `CLAUDE.md`, `install.sh`) out of `$HOME`; add new repo-only root files to its default list. |
-| `.local/bin/` | Commands, prefixed `dot-` so they don't clash with shtuff functions (`update`, `install`, ...). `dot-update` pulls and updates submodules; `dot-backup` and `dot-restore` snapshot and restore your dotfiles (backups in `~/.dotfiles-backup`, the same place the installer puts the files it replaces). New commands are already allowed in `.gitignore` (`!/.local/bin/**`). |
-| `.local/share/dotfiles/` | `common.sh`: loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`) plus the backup helpers (`backup_root`, `list_dotfiles`, `snapshot_dotfiles`) and `run_monitored`, a thin wrapper that runs a command under shtuff's `monitor` spinner. Source it from every command. Don't add logging or other generic utilities there; shtuff already provides them. |
+| `.local/bin/` | Commands, prefixed `dot-` so they don't clash with shtuff functions (`update`, `install`, ...). `dot-update` pulls and updates submodules; `dot-backup` and `dot-restore` snapshot and restore your dotfiles (backups in `~/.dotfiles-backup`, the same place the installer puts the files it replaces); `dot-add` writes the whitelist rules for new paths (use it instead of hand-editing nested rules); `dot-doctor` health-checks the setup; `dot-uninstall` reverses the installer. New commands are already allowed in `.gitignore` (`!/.local/bin/**`). |
+| `.local/share/dotfiles/` | `common.sh`: loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`) plus the backup helpers (`backup_root`, `list_dotfiles`, `snapshot_dotfiles`, `restore_snapshot`), the secret checks (`is_sensitive`, `SECRET_PATTERN`) and `run_monitored`, a thin wrapper that runs a command under shtuff's `monitor` spinner. Source it from every command. Don't add logging or other generic utilities there; shtuff already provides them. |
 | `README.md` | Install instructions (the `curl ... \| bash` one-liner). |
 
 ## Branches
@@ -44,6 +44,7 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
   then `!/.config/nvim/` and `!/.config/nvim/**`.
 - Verify with `git check-ignore -v <path>` (no output for a tracked path means allowed
   only if `git status` lists it).
+- Prefer `dot-add <path>` to hand-editing: it re-includes every parent directory and verifies the result.
 - Never remove the leading `*`. Never commit secrets, keys, or machine-specific state.
 
 ## shtuff conventions

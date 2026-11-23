@@ -68,22 +68,34 @@ Keep them POSIX-compatible; put shell-specific code in the rc files.
 
 ## Adding files
 
-`.gitignore` is a whitelist: everything is ignored unless allowed. To track a new file:
+`.gitignore` is a whitelist: everything is ignored unless allowed. `dot-add` writes the rules for
+you (including every parent directory of a nested path) and stages the result:
+
+```bash
+dot-add ~/.vimrc ~/.config/nvim   # allow and stage a file and a directory
+dot-add --dry-run ~/.tmux.conf    # show the .gitignore rules without changing anything
+git commit -m "Track vim and nvim config"
+```
+
+It refuses paths that look like secrets (keys, credentials, `.env` files, private-key blocks)
+unless you pass `--force`. If you'd rather edit by hand, the rules look like this:
 
 ```gitignore
 !/.vimrc
-```
-
-For a directory, re-include each level:
-
-```gitignore
 !/.config/
 /.config/*
 !/.config/nvim/
 !/.config/nvim/**
 ```
 
-Then `git add .vimrc .gitignore && git commit`. Check with `git check-ignore -v <path>`.
+Check a path with `git check-ignore -v <path>`.
+
+## Health check
+
+`dot-doctor` checks your git version, the worktree and bare repo, your `origin`, the whitelist,
+shtuff, `PATH`, placeholder values in `.gitconfig`, files waiting to be tracked, uncommitted changes
+and secrets in tracked files. It prints `[info]`, `[warn]` or `[error]` for each check and exits 1
+if anything is broken.
 
 ## Updating
 
@@ -116,6 +128,19 @@ dot-restore [BACKUP] [--yes]      # restore a backup (default: the newest); asks
 Submodules are recorded by commit, not copied. `dot-restore` saves your current state to a
 `-pre-restore` backup before overwriting anything, so a restore can be undone. It also restores the
 files the installer backed up. Move the backup location with `DOTFILES_BACKUP_DIR`.
+
+## Uninstall
+
+```bash
+dot-uninstall                          # remove the git plumbing; your files stay as plain files
+dot-uninstall --remove-files           # also delete the files the repo checked out
+dot-uninstall --restore <backup>       # remove them, then put back a backup (e.g. the installer's)
+dot-uninstall --keep-repo              # keep ~/.dotfiles.git so your history survives
+```
+
+It saves a `-pre-uninstall` backup first, warns about uncommitted or unpushed work, and asks before
+doing anything. It never touches files the repo doesn't track, and refuses to run unless `~` is a
+`dot` install (a link to a bare repo).
 
 ## Extra worktrees
 
