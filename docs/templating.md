@@ -82,5 +82,5 @@ Edit files in your home directory as usual and commit from there. Pull changes a
 shtuff submodule to its newest release with the update script; see [Updating](updating.md):
 
 ```bash
-gys-update --latest
+dot-update --latest
 ```

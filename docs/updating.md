@@ -1,13 +1,13 @@
 # Updating
 
-`gys-update` pulls your latest dotfiles and keeps submodules in step. It lives in
+`dot-update` pulls your latest dotfiles and keeps submodules in step. It lives in
 `~/.local/bin`, which is on your `PATH` once `env.sh` has loaded, so open a new shell after
 installing and run it from anywhere.
 
 ```bash
-gys-update                     # pull, then sync submodules to the pinned commits
-gys-update --latest            # also move submodules to their newest stable release tag
-gys-update --latest --commit   # ...and commit the bump
+dot-update                     # pull, then sync submodules to the pinned commits
+dot-update --latest            # also move submodules to their newest stable release tag
+dot-update --latest --commit   # ...and commit the bump
 ```
 
 ## What it does
@@ -39,8 +39,8 @@ gys-update --latest --commit   # ...and commit the bump
 
 | Path | Holds |
 |------|-------|
-| `~/.local/bin/` | Commands, prefixed `gys-` so they don't clash with shtuff functions such as `update` and `install` |
-| `~/.local/share/gityourshtuff/common.sh` | Shared setup that every command sources |
+| `~/.local/bin/` | Commands, prefixed `dot-` so they don't clash with shtuff functions such as `update` and `install` |
+| `~/.local/share/dotfiles/common.sh` | Shared setup that every command sources |
 | `~/.local/share/shtuff/` | The shtuff framework (git submodule, pinned to a release tag) |
 
 Everything else under `~/.local` is ignored by the whitelist `.gitignore`, so other tools' data
@@ -48,12 +48,12 @@ stays out of your repo.
 
 ## Writing your own commands
 
-- Put new commands in `~/.local/bin/` with a `gys-` prefix, and make them executable. The
+- Put new commands in `~/.local/bin/` with a `dot-` prefix, and make them executable. The
   whitelist already allows everything in that directory.
 - Source the shared helpers at the top of each command:
 
   ```bash
-  source "$(dirname "${BASH_SOURCE[0]}")/../share/gityourshtuff/common.sh"
+  source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
   ```
 
 - `common.sh` loads [shtuff](https://github.com/rmayobre/shtuff). Log with its `info`, `warn` and
