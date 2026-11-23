@@ -16,6 +16,7 @@ nav:
   - Shell configuration: shell-config.md
   - Whitelisting files: whitelisting.md
   - Updating: updating.md
+  - macOS: macos.md
   - Publishing the docs site: publishing.md
 
 plugins:
