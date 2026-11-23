@@ -11,6 +11,7 @@ worktree of a bare repository, and a whitelist `.gitignore` tracks only the file
 - [Shell configuration](shell-config.md): aliases, functions and variables
 - [Whitelisting files](whitelisting.md): track new files and directories
 - [Updating](updating.md): pull changes and update submodules with `dot-update`
+- [Backup and restore](backup-restore.md): snapshot your dotfiles and put them back with `dot-backup` and `dot-restore`
 - [macOS](macos.md): login shells, Homebrew and script compatibility
 - [Publishing the docs site](publishing.md): build and deploy this manual with GitHub Actions
 - [shtuff framework](https://github.com/rmayobre/shtuff): the underlying shell library

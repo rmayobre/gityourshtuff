@@ -16,6 +16,7 @@ nav:
   - Shell configuration: shell-config.md
   - Whitelisting files: whitelisting.md
   - Updating: updating.md
+  - Backup and restore: backup-restore.md
   - macOS: macos.md
   - Publishing the docs site: publishing.md
 
