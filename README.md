@@ -28,7 +28,9 @@ The installer:
 1. Clones your repo as a bare repo at `~/.dotfiles.git`.
 2. Adds a git worktree rooted at `$HOME` (so your home directory *is* the checkout).
 3. Moves any existing files it would overwrite to `~/.dotfiles-backup/<timestamp>/`.
-4. Checks out your files and initializes the shtuff submodule.
+4. Checks out your files and initializes the shtuff submodule. A sparse checkout keeps the repo-only
+   files (`README.md`, `LICENSE`, `AGENTS.md`, `CLAUDE.md`, `install.sh`) out of your home directory.
+   They stay in the repo; see `git sparse-checkout list`.
 
 Open a new shell afterwards. Day-to-day, `git status`, `git add`, `git commit` and
 `git push` work from anywhere inside `$HOME` that isn't another repo.
@@ -38,6 +40,7 @@ Open a new shell afterwards. Day-to-day, `git status`, `git add`, `git commit` a
 | `DOTFILES_URL` | _(required)_ | Repo to clone |
 | `DOTFILES_GIT` | `~/.dotfiles.git` | Bare repo location |
 | `DOTFILES_REF` | `main` | Branch to check out |
+| `DOTFILES_EXCLUDE` | `README.md LICENSE AGENTS.md CLAUDE.md install.sh` | Top-level repo files to keep out of `$HOME` (space-separated; empty to check out everything) |
 
 Prefer to read it first? Download and inspect before running:
 

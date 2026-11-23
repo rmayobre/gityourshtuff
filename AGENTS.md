@@ -21,7 +21,7 @@ Keep it minimal: templated file structure, as little scripting as possible.
 | `.config/shell/` | `env.sh`, `aliases.sh`, `functions.sh` shared by bash and zsh; sourced from the rc files (env also from `.profile`). |
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
-| `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). |
+| `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). A sparse checkout (`DOTFILES_EXCLUDE`) keeps repo-only root files (`README.md`, `LICENSE`, `AGENTS.md`, `CLAUDE.md`, `install.sh`) out of `$HOME`; add new repo-only root files to its default list. |
 | `.local/bin/` | Commands, prefixed `dot-` so they don't clash with shtuff functions (`update`, `install`, ...). `dot-update` pulls and updates submodules. New commands are already allowed in `.gitignore` (`!/.local/bin/**`). |
 | `.local/share/dotfiles/` | `common.sh`: loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`) plus `run_monitored`, a thin wrapper that runs a command under shtuff's `monitor` spinner. Source it from every command. Don't add logging or other generic utilities there; shtuff already provides them. |
 | `README.md` | Install instructions (the `curl ... \| bash` one-liner). |
