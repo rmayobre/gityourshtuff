@@ -13,7 +13,7 @@ home directory after install, in `~/scripts/`.
 
 1. Stops if you have uncommitted changes to tracked files, so a pull can't clobber them.
    Commit or stash first.
-2. Pulls the current branch from `origin` (fast-forward only).
+2. Pulls the current branch from `origin` (fast-forward only), with a progress spinner.
 3. Syncs submodules to the commits your repo pins, initializing any that are missing.
 4. With `--latest`, fetches tags in each submodule and checks out the newest stable release
    tag (`vX.Y.Z`; betas and release candidates are ignored). The change is staged.
@@ -35,8 +35,11 @@ home directory after install, in `~/scripts/`.
 - A fast-forward pull fails if your local branch has diverged from `origin`. Resolve that with
   `git pull --rebase` or a merge, then run the script again.
 - Scripts in `scripts/` load [shtuff](https://github.com/rmayobre/shtuff) through
-  `scripts/common.sh` and log with its `info`, `warn` and `error` functions. `common.sh` adds only
-  helpers specific to this repo (`repo_root`, `has_tracked_changes`, `latest_stable_tag`). Source it
+  `scripts/common.sh`. They log with its `info`, `warn` and `error` functions and show progress for network steps with its `monitor` spinner (through `run_monitored` in `common.sh`). `common.sh` adds only
+  helpers specific to this repo (`repo_root`, `has_tracked_changes`, `latest_stable_tag`, `run_monitored`). Source it
   from your own scripts, and put new helper scripts in `scripts/`. `.gitignore` already allows
   everything under `scripts/`.
 - If the shtuff submodule is missing, the script tells you to run `git submodule update --init`.
+- Every script in `scripts/` should do the same. The only scripts that don't use shtuff are the
+  installer (it runs before shtuff is on the machine) and the shell files that login shells read
+  (`.profile`, `.zprofile`, `.config/shell/env.sh`).
