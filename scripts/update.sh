@@ -19,25 +19,28 @@ for arg in "$@"; do
         --latest) LATEST=true ;;
         --commit) COMMIT=true ;;
         -h|--help) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-        *) die "unknown option: $arg (try --help)" ;;
+        *) error "unknown option: $arg (try --help)"; exit 1 ;;
     esac
 done
-$COMMIT && ! $LATEST && die "--commit only applies together with --latest"
+$COMMIT && ! $LATEST && { error "--commit only applies together with --latest"; exit 1; }
 
-command -v git >/dev/null || die "git is required"
+command -v git >/dev/null || { error "git is required"; exit 1; }
 ROOT="$(repo_root)"
 cd "$ROOT"
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$ROOT is not a git checkout"
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { error "$ROOT is not a git checkout"; exit 1; }
 
-has_tracked_changes "$ROOT" && die "uncommitted changes in $ROOT; commit or stash them first"
+if has_tracked_changes "$ROOT"; then
+    error "uncommitted changes in $ROOT; commit or stash them first"
+    exit 1
+fi
 
-log "Pulling latest changes"
+info "Pulling latest changes"
 # Pull by branch name: a bare-clone install has no upstream or fetch refspec configured.
 branch="$(git symbolic-ref --short -q HEAD || true)"
-[ -n "$branch" ] || die "detached HEAD; check out a branch first"
+[ -n "$branch" ] || { error "detached HEAD; check out a branch first"; exit 1; }
 git pull --ff-only origin "$branch"
 
-log "Syncing submodules"
+info "Syncing submodules"
 git submodule sync --recursive >/dev/null
 git submodule update --init --recursive
 
@@ -52,22 +55,22 @@ if $LATEST; then
         fi
         current="$(git -C "$sm" describe --tags --exact-match 2>/dev/null || true)"
         if [ "$current" = "$tag" ]; then
-            log "$sm already at $tag"
+            info "$sm already at $tag"
             continue
         fi
         git -C "$sm" checkout --quiet "$tag"
         git add "$sm"
-        log "$sm: ${current:-$(git -C "$sm" rev-parse --short HEAD)} -> $tag"
+        info "$sm: ${current:-$(git -C "$sm" rev-parse --short HEAD)} -> $tag"
     done
 
     if git diff --cached --quiet; then
-        log "Submodules already at their latest releases"
+        info "Submodules already at their latest releases"
     elif $COMMIT; then
         git commit -qm "Update submodules to latest releases"
-        log "Committed submodule updates (run 'git push' to publish)"
+        info "Committed submodule updates (run 'git push' to publish)"
     else
-        log "Submodule updates staged; commit them with: git commit -m 'Update submodules'"
+        info "Submodule updates staged; commit them with: git commit -m 'Update submodules'"
     fi
 fi
 
-log "Done"
+info "Done"
