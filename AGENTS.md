@@ -17,7 +17,7 @@ Keep it minimal: templated file structure, as little scripting as possible.
 | Path | Purpose |
 |------|---------|
 | `.local/share/shtuff/` | shtuff framework submodule, pinned to a release tag (not `main`). Do not edit; bump by checking out a newer tag. |
-| `.bashrc`, `.zshrc`, `.profile` | Shell startup files that source `.local/share/shtuff/shtuff.sh`. |
+| `.bashrc`, `.zshrc`, `.profile` | Shell startup files. They do **not** source shtuff (it adds startup time and defines ~125 functions, such as `install` and `update`, that shadow system commands); `.config/shell/functions.sh` provides `use_shtuff` to load it on demand. |
 | `.config/shell/` | `env.sh`, `aliases.sh`, `functions.sh` shared by bash and zsh; sourced from the rc files (env also from `.profile`). |
 | `.gitconfig` | Placeholder identity/config (`Your Name`, `you@example.com`); `dot-init` replaces the placeholders and `dot-doctor` warns while they remain, so keep those exact strings. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
@@ -49,7 +49,7 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
 
 ## shtuff conventions
 
-- Source `shtuff.sh` locally from the submodule; do not use the remote variant in dotfiles.
+- Source `shtuff.sh` locally from the submodule; do not use the remote variant in dotfiles. Commands load it through `common.sh`; never source it from the shell startup files.
 - Use shtuff functions (`info`, `warn`, `error`, `confirm`, `install`, ...) rather than reimplementing. Commands in `.local/bin/` log with these, never with `echo`/`printf`; shtuff's `error` doesn't exit, so follow it with `exit 1`.
   See `.local/share/shtuff/AGENTS.md` for the API.
 - **Every command in `.local/bin/` must source `.local/share/dotfiles/common.sh` (which loads shtuff)** and use

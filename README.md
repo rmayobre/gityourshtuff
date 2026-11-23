@@ -80,6 +80,10 @@ Aliases, functions and variables live in `.config/shell/` (`aliases.sh`, `functi
 and are sourced by both `.bashrc` and `.zshrc`, so they're shared between bash and zsh.
 Keep them POSIX-compatible; put shell-specific code in the rc files.
 
+shtuff isn't loaded in your interactive shells: it adds startup time and defines functions like
+`install` and `update` that would shadow system commands. The `dot-*` commands load it themselves.
+Run `use_shtuff` in a bash session to load it on demand.
+
 ## Adding files
 
 `.gitignore` is a whitelist: everything is ignored unless allowed. `dot-add` writes the rules for
