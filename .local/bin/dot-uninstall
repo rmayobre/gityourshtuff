@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# Stop managing your home directory with this repo (the reverse of the installer).
+#
+# Usage: dot-uninstall [--remove-files] [--restore BACKUP] [--keep-repo] [--yes]
+#
+#   (no options)     Remove the git plumbing (~/.git, ~/.gitignore, ~/.gitmodules and the bare
+#                    repo ~/.dotfiles.git). Your dotfiles stay in place as plain files.
+#   --remove-files   Also remove the files the repo checked out (including shtuff and these
+#                    commands). Files that aren't tracked are never touched.
+#   --restore BACKUP Remove the repo's files, then put back a backup (a folder name in
+#                    ~/.dotfiles-backup, or a path), such as the originals the installer saved.
+#   --keep-repo      Keep the bare repo ~/.dotfiles.git so your history survives (a later
+#                    install can reuse it).
+#   --yes            Don't ask for confirmation.
+#
+# A "pre-uninstall" backup of your current files is always saved to ~/.dotfiles-backup first.
+set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
+
+REMOVE_FILES=false
+KEEP_REPO=false
+YES=false
+RESTORE=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --remove-files) REMOVE_FILES=true ;;
+        --keep-repo) KEEP_REPO=true ;;
+        --yes|-y) YES=true ;;
+        --restore)
+            [ $# -ge 2 ] || { error "--restore needs a backup name or path"; exit 1; }
+            RESTORE="$2"; shift ;;
+        -h|--help) sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) error "unknown option: $1 (try --help)"; exit 1 ;;
+    esac
+    shift
+done
+[ -z "$RESTORE" ] || REMOVE_FILES=true
+
+command -v git >/dev/null || { error "git is required"; exit 1; }
+ROOT="$(cd "$(repo_root)" && pwd -P)" || { error "no git worktree found; nothing to uninstall"; exit 1; }
+cd "$ROOT"
+
+# Refuse anything that isn't the installer's layout: a gitfile at ~/.git pointing into a bare repo.
+if [ ! -f "$ROOT/.git" ]; then
+    error "$ROOT/.git isn't a link to a bare repo, so this isn't a dot install; refusing to touch it"
+    exit 1
+fi
+COMMON="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+if [ -z "$COMMON" ] || [ "$COMMON" = "/" ] || [ "$COMMON" = "$ROOT" ] \
+    || [ "$(git --git-dir="$COMMON" rev-parse --is-bare-repository 2>/dev/null)" != "true" ]; then
+    error "$COMMON isn't a bare repository; refusing to remove it"
+    exit 1
+fi
+
+# Resolve the backup to restore before anything is deleted.
+SRC=""
+if [ -n "$RESTORE" ]; then
+    case "$RESTORE" in */*) SRC="$RESTORE" ;; *) SRC="$(backup_root)/$RESTORE" ;; esac
+    [ -d "$SRC" ] || { error "backup not found: $SRC"; exit 1; }
+    SRC="$(cd "$SRC" && pwd -P)"
+fi
+
+branch="$(git symbolic-ref --short -q HEAD || true)"
+ntracked="$(git ls-files | wc -l | tr -d ' ')"
+
+# --- what will happen --------------------------------------------------------------------
+info "This will:"
+echo "  - save your current files to $(backup_root)/<timestamp>-pre-uninstall"
+if $REMOVE_FILES; then
+    echo "  - delete the $ntracked tracked files and the shtuff submodule under $ROOT"
+else
+    echo "  - leave your dotfiles in place, and remove only $ROOT/.git, .gitignore and .gitmodules"
+fi
+[ -z "$SRC" ] || echo "  - restore the files from $SRC"
+if $KEEP_REPO; then echo "  - keep the bare repo $COMMON"; else echo "  - delete the bare repo $COMMON (your local history)"; fi
+
+# --- things worth knowing first ----------------------------------------------------------
+if has_tracked_changes "$ROOT"; then
+    warn "You have uncommitted changes; they're in the pre-uninstall backup but not in your repo."
+fi
+if ! $KEEP_REPO && [ -n "$branch" ]; then
+    if git fetch --quiet origin "$branch" 2>/dev/null; then
+        git merge-base --is-ancestor HEAD FETCH_HEAD 2>/dev/null \
+            || warn "Commits on $branch haven't been pushed to origin and would be lost. Push first, or use --keep-repo."
+    else
+        warn "Couldn't reach origin to check for unpushed commits; use --keep-repo if unsure."
+    fi
+fi
+
+if ! $YES; then
+    confirm "Continue?" || { info "Cancelled"; exit 0; }
+fi
+
+# --- do it -------------------------------------------------------------------------------
+safety="$(backup_root)/$(date +%Y%m%d-%H%M%S)-pre-uninstall"
+run_monitored "Saving current files" snapshot_dotfiles "$safety" || exit 1
+info "Current files saved to $safety"
+
+list="$(mktemp)"
+trap 'rm -f "$list"' EXIT
+git ls-files -z >"$list"
+
+remove_tracked() {
+    local p d
+    while IFS= read -r -d '' p; do
+        [ "$p" = ".local/share/shtuff" ] && continue          # directory; removed separately
+        rm -f -- "$ROOT/$p"
+        d="$(dirname "$p")"                                   # prune directories left empty
+        while [ "$d" != "." ] && rmdir "$ROOT/$d" 2>/dev/null; do d="$(dirname "$d")"; done
+    done <"$list"
+}
+remove_plumbing_files() { rm -f -- "$ROOT/.gitignore" "$ROOT/.gitmodules"; }
+
+if $REMOVE_FILES; then
+    run_monitored "Removing tracked files" remove_tracked || exit 1
+    if [ -d "$ROOT/.local/share/shtuff" ]; then
+        delete "$ROOT/.local/share/shtuff" --message "Removing" || exit 1
+        rmdir "$ROOT/.local/share" "$ROOT/.local" 2>/dev/null || true
+    fi
+else
+    remove_plumbing_files
+fi
+
+delete "$ROOT/.git" --message "Unlinking" || exit 1
+if $KEEP_REPO; then
+    git --git-dir="$COMMON" worktree prune
+else
+    delete "$COMMON" --message "Removing" || exit 1
+fi
+
+if [ -n "$SRC" ]; then
+    run_monitored "Restoring $(basename "$SRC")" restore_snapshot "$SRC" "$ROOT" || exit 1
+fi
+
+info "Done. Your home directory is no longer managed by git."
+info "Your files before uninstalling are in $safety"
+$KEEP_REPO && info "The bare repo is still at $COMMON"
+exit 0
