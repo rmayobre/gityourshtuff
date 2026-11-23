@@ -9,11 +9,15 @@
 #   DOTFILES_URL  (required) repo to clone
 #   DOTFILES_GIT  bare repo location     (default: $HOME/.dotfiles.git)
 #   DOTFILES_REF  branch to check out    (default: main)
+#   DOTFILES_EXCLUDE  space-separated top-level repo files to keep out of $HOME
+#                 (default: "README.md LICENSE AGENTS.md CLAUDE.md install.sh"; set to "" to
+#                 check out everything). They stay in the repo; only the checkout skips them.
 set -euo pipefail
 
 : "${DOTFILES_URL:?Set DOTFILES_URL to your dotfiles repo URL}"
 DOTFILES_GIT="${DOTFILES_GIT:-$HOME/.dotfiles.git}"
 DOTFILES_REF="${DOTFILES_REF:-main}"
+DOTFILES_EXCLUDE="${DOTFILES_EXCLUDE-README.md LICENSE AGENTS.md CLAUDE.md install.sh}"
 BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 
 log() { printf '==> %s\n' "$*"; }
@@ -46,8 +50,23 @@ dot worktree repair "$HOME"
 
 cd "$HOME"
 
-# Back up any existing files the checkout would overwrite.
+# Keep repo-only files (README, LICENSE, ...) out of $HOME with a sparse checkout.
+excluded() {
+    local x
+    for x in $DOTFILES_EXCLUDE; do [ "$1" = "$x" ] && return 0; done
+    return 1
+}
+if [ -n "$DOTFILES_EXCLUDE" ]; then
+    log "Excluding from checkout: $DOTFILES_EXCLUDE"
+    {
+        echo "/*"
+        for x in $DOTFILES_EXCLUDE; do echo "!/$x"; done
+    } | git sparse-checkout set --no-cone --stdin
+fi
+
+# Back up any existing files the checkout would overwrite (skipping excluded ones).
 while IFS= read -r -d '' f; do
+    excluded "$f" && continue
     if [ -e "$f" ] || [ -L "$f" ]; then
         mkdir -p "$BACKUP_DIR/$(dirname "$f")"
         mv "$f" "$BACKUP_DIR/$f"
@@ -58,6 +77,11 @@ done < <(git ls-tree -r -z --name-only HEAD)
 log "Checking out $DOTFILES_REF"
 git config status.showUntrackedFiles no
 git checkout -f "$DOTFILES_REF"
+# A file of yours that shares a name with an excluded repo file (say ~/README.md) stays in place;
+# tell git to ignore it so it doesn't show as modified.
+for x in $DOTFILES_EXCLUDE; do
+    [ -e "$x" ] && git update-index --skip-worktree "$x"
+done
 git submodule update --init --recursive
 
 log "Done. Open a new shell to load your dotfiles."
