@@ -76,5 +76,8 @@ git checkout -f "$DOTFILES_REF"
 git submodule update --init --recursive
 
 log "Done. Open a new shell to load your dotfiles."
-[ -d "$BACKUP_DIR" ] && log "Previous files saved in $BACKUP_DIR"
+if [ -d "$BACKUP_DIR" ]; then
+    log "Previous files saved in $BACKUP_DIR"
+    log "Put them back with: dot-restore ${BACKUP_DIR##*/}"
+fi
 exit 0

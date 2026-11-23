@@ -101,6 +101,22 @@ Commands live in `~/.local/bin` (prefixed `dot-`) and shared helpers in
 out the newest stable `vX.Y.Z` tag (ignoring betas) and stages the change. The script refuses
 to run with uncommitted changes to tracked files.
 
+## Backup and restore
+
+```bash
+dot-backup                        # snapshot your current dotfiles to ~/.dotfiles-backup/<timestamp>/
+dot-backup --name before-upgrade  # ...with a label in the folder name
+dot-restore --list                # list backups, newest first
+dot-restore --dry-run             # show what restoring the newest backup would change
+dot-restore [BACKUP] [--yes]      # restore a backup (default: the newest); asks first
+```
+
+`dot-backup` copies your tracked files plus any new files the whitelist allows, as they are on disk
+(uncommitted edits included), and writes a `MANIFEST.txt` with the date, host, branch and commit.
+Submodules are recorded by commit, not copied. `dot-restore` saves your current state to a
+`-pre-restore` backup before overwriting anything, so a restore can be undone. It also restores the
+files the installer backed up. Move the backup location with `DOTFILES_BACKUP_DIR`.
+
 ## Extra worktrees
 
 Because the repo is bare, you can check out other branches elsewhere, e.g. to edit the docs:
