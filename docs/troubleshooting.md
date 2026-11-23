@@ -39,7 +39,10 @@ files, `dot-add` blocks the common cases before they're staged.
 - **`dot-update: command not found`:** `~/.local/bin` isn't on your `PATH` yet. Open a new shell,
   or run `source ~/.config/shell/env.sh`.
 - **`git status` shows nothing for a new file:** the whitelist ignores it. Run `dot-add <path>`.
-- **Errors loading shtuff on macOS:** shtuff needs bash 4 or newer until its macOS support lands.
-  See [macOS](macos.md).
+- **Errors loading shtuff on macOS:** shtuff needs bash 4 or newer until its macOS support lands,
+  so the `dot-*` commands (and `use_shtuff`) fail on macOS's bash 3.2. Opening a terminal is
+  unaffected. See [macOS](macos.md).
+- **`install` or `update` behaves oddly in your shell:** you've loaded shtuff with `use_shtuff`,
+  which shadows system commands of the same name. Open a new shell.
 - **Something broke after a change:** restore a snapshot with `dot-restore`, see
   [Backup and restore](backup-restore.md).

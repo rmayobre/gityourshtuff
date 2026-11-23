@@ -39,7 +39,8 @@ once, even if the file is sourced more than once. Nothing happens if Homebrew is
 ## Script compatibility
 
 macOS ships bash 3.2 and BSD versions of `sed`, `date` and friends. The installer and the shell
-startup files avoid bash 4+ features and GNU-only flags so they run on the stock shell. Scripts in
+startup files avoid bash 4+ features and GNU-only flags so they run on the stock shell. They
+don't load shtuff, so opening a terminal on a Mac never hits shtuff's bash 4 requirement. Scripts in
 `~/.local/bin` load shtuff, so they need whatever bash version shtuff requires; shtuff's own macOS
 support is handled in that project. When you write your own scripts for this layout:
 

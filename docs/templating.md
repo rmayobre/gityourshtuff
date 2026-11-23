@@ -39,8 +39,9 @@ Then:
 
 - **`.gitconfig`:** you can edit the placeholder name and email now, or skip this and let
   `dot-init` set them after you install (step 4).
-- **`.bashrc`, `.zshrc`, `.profile`:** keep, trim, or extend them. They source the shtuff
-  framework and your shell config.
+- **`.bashrc`, `.zshrc`, `.profile`:** keep, trim, or extend them. They load your shell config
+  (`.config/shell/`). They don't load shtuff; the `dot-*` commands do that themselves, and
+  `use_shtuff` loads it on demand.
 - **`.config/shell/`:** add your aliases, functions and variables. See
   [Shell configuration](shell-config.md).
 - **Other dotfiles:** copy them into the repo at the same relative path they have in your
