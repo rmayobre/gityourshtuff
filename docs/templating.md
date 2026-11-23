@@ -91,7 +91,8 @@ It asks only for what is still unset:
 Everything can also be passed as options, which is handy for scripts:
 
 ```bash
-dot-init --name "Ada Lovelace" --email ada@example.org          --origin git@github.com:ada/dotfiles.git --commit
+dot-init --name "Ada Lovelace" --email ada@example.org \
+         --origin git@github.com:ada/dotfiles.git --commit
 ```
 
 `--commit` commits the `.gitconfig` change. Nothing is pushed for you: finish with
