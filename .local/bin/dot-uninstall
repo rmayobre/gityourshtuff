@@ -135,5 +135,9 @@ fi
 
 info "Done. Your home directory is no longer managed by git."
 info "Your files before uninstalling are in $safety"
-$KEEP_REPO && info "The bare repo is still at $COMMON"
+if $KEEP_REPO; then info "The bare repo is still at $COMMON"; fi
+if [ -z "$SRC" ]; then
+    info "Originals the installer set aside are in $(backup_root); copy back what you want, e.g.:"
+    info "  cp -R $(backup_root)/<folder>/. $ROOT/"
+fi
 exit 0
