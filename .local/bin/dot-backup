@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Back up your current dotfiles: the tracked files plus any new files your whitelist
+# .gitignore allows, exactly as they are on disk (uncommitted edits included).
+#
+# Usage: dot-backup [--name LABEL]
+#
+#   --name LABEL   Add LABEL to the backup's folder name (for example "before-upgrade").
+#
+# Backups go to ~/.dotfiles-backup/<timestamp>[-LABEL]/ (override the location with
+# DOTFILES_BACKUP_DIR). A MANIFEST.txt records the date, host, branch and commit. Submodules
+# are recorded by commit, not copied. Restore with dot-restore.
+set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
+
+LABEL=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --name)
+            [ $# -ge 2 ] || { error "--name needs a value"; exit 1; }
+            LABEL="$2"; shift 2 ;;
+        -h|--help) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) error "unknown option: $1 (try --help)"; exit 1 ;;
+    esac
+done
+case "$LABEL" in
+    *[!A-Za-z0-9._-]*) error "--name may only contain letters, digits, '.', '_' and '-'"; exit 1 ;;
+esac
+
+command -v git >/dev/null || { error "git is required"; exit 1; }
+command -v tar >/dev/null || { error "tar is required"; exit 1; }
+git -C "$(repo_root)" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || { error "$(repo_root) is not a git checkout"; exit 1; }
+
+dest="$(backup_root)/$(date +%Y%m%d-%H%M%S)${LABEL:+-$LABEL}"
+[ -e "$dest" ] && { error "$dest already exists; try again in a second"; exit 1; }
+
+run_monitored "Backing up dotfiles" snapshot_dotfiles "$dest" || exit 1
+info "Backup saved to $dest"
+info "$(grep '^files:' "$dest/MANIFEST.txt" | sed 's/  */ /') backed up; restore with: dot-restore ${dest##*/}"

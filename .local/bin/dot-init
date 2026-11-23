@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# First-run setup after installing from the template: set your git identity and point
+# "origin" at your own dotfiles repo.
+#
+# Usage: dot-init [--name NAME] [--email EMAIL] [--origin URL] [--reconfigure] [--commit]
+#
+#   --name NAME      Your name for git commits (written to ~/.gitconfig).
+#   --email EMAIL    Your email for git commits.
+#   --origin URL     URL of your own dotfiles repo; becomes the "origin" remote.
+#   --reconfigure    Ask again even for values that are already set.
+#   --commit         Commit the .gitconfig change ("Set git identity").
+#
+# Anything not given as an option is asked for, but only when it still has the template's
+# placeholder (or nothing). Run it again any time; settled values are left alone.
+set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
+
+NAME=""; EMAIL=""; ORIGIN=""; RECONFIGURE=false; COMMIT=false
+need_value() { [ "$2" -ge 2 ] || { error "$1 needs a value"; exit 1; }; }
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --name)   need_value "$1" $#; NAME="$2"; shift ;;
+        --email)  need_value "$1" $#; EMAIL="$2"; shift ;;
+        --origin) need_value "$1" $#; ORIGIN="$2"; shift ;;
+        --reconfigure) RECONFIGURE=true ;;
+        --commit) COMMIT=true ;;
+        -h|--help) sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) error "unknown option: $1 (try --help)"; exit 1 ;;
+    esac
+    shift
+done
+
+command -v git >/dev/null || { error "git is required"; exit 1; }
+ROOT="$(cd "$(repo_root)" && pwd -P)" || { error "no git worktree found; run the installer first"; exit 1; }
+CONFIG="$ROOT/.gitconfig"
+TEMPLATE_REPO="rmayobre/gityourshtuff"
+PLACEHOLDER_NAME="Your Name"
+PLACEHOLDER_EMAIL="you@example.com"
+
+# ask PROMPT: prompt with shtuff's `question`; the reply is left in $answer. At end of input
+# (no terminal) $answer is empty and we stop asking.
+ask() { question "$1" || true; }
+
+# valid_email VALUE: something@something.tld without spaces.
+valid_email() {
+    case "$1" in *" "*|"") return 1 ;; esac
+    case "$1" in ?*@?*.?*) return 0 ;; *) return 1 ;; esac
+}
+
+CHANGED=false
+ORIGIN_OK=true
+
+# --- name --------------------------------------------------------------------------------
+current_name="$(git config --file "$CONFIG" user.name 2>/dev/null || true)"
+if [ -z "$NAME" ]; then
+    if $RECONFIGURE || [ -z "$current_name" ] || [ "$current_name" = "$PLACEHOLDER_NAME" ]; then
+        ask "Your name for git commits${current_name:+ [$current_name]}:"
+        NAME="${answer:-}"
+        [ -n "$NAME" ] || NAME="$current_name"
+        if [ -z "$NAME" ] || [ "$NAME" = "$PLACEHOLDER_NAME" ]; then
+            error "a name is required (pass --name)"; exit 1
+        fi
+    else
+        info "Keeping name: $current_name"
+        NAME="$current_name"
+    fi
+fi
+if [ "$NAME" != "$current_name" ]; then
+    git config --file "$CONFIG" user.name "$NAME"; CHANGED=true
+    info "Set name: $NAME"
+fi
+
+# --- email -------------------------------------------------------------------------------
+current_email="$(git config --file "$CONFIG" user.email 2>/dev/null || true)"
+if [ -z "$EMAIL" ]; then
+    if $RECONFIGURE || [ -z "$current_email" ] || [ "$current_email" = "$PLACEHOLDER_EMAIL" ]; then
+        ask "Your email for git commits${current_email:+ [$current_email]}:"
+        EMAIL="${answer:-}"
+        [ -n "$EMAIL" ] || EMAIL="$current_email"
+    else
+        info "Keeping email: $current_email"
+        EMAIL="$current_email"
+    fi
+fi
+if [ "$EMAIL" = "$PLACEHOLDER_EMAIL" ] || ! valid_email "$EMAIL"; then
+    error "a valid email is required (pass --email you@yourdomain.com)"; exit 1
+fi
+if [ "$EMAIL" != "$current_email" ]; then
+    git config --file "$CONFIG" user.email "$EMAIL"; CHANGED=true
+    info "Set email: $EMAIL"
+fi
+
+# --- origin ------------------------------------------------------------------------------
+current_origin="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
+is_template() { case "$1" in *"$TEMPLATE_REPO"*) return 0 ;; *) return 1 ;; esac; }
+if [ -z "$ORIGIN" ]; then
+    if $RECONFIGURE || [ -z "$current_origin" ] || is_template "$current_origin"; then
+        if is_template "$current_origin"; then
+            warn "origin still points at the template ($current_origin). Create your own repo from it first (see the docs)."
+        fi
+        ask "URL of your own dotfiles repo, e.g. https://github.com/<you>/dotfiles.git (blank to skip):"
+        ORIGIN="${answer:-}"
+    else
+        info "Keeping origin: $current_origin"
+    fi
+fi
+if [ -n "$ORIGIN" ]; then
+    case "$ORIGIN" in *" "*) error "the repo URL can't contain spaces"; exit 1 ;; esac
+    if is_template "$ORIGIN"; then
+        error "$ORIGIN is the template itself; use the URL of your own copy"; exit 1
+    fi
+    if [ -n "$current_origin" ]; then
+        [ "$ORIGIN" = "$current_origin" ] || git -C "$ROOT" remote set-url origin "$ORIGIN"
+    else
+        git -C "$ROOT" remote add origin "$ORIGIN"
+    fi
+    [ "$ORIGIN" = "$current_origin" ] || info "Set origin: $ORIGIN"
+elif [ -z "$current_origin" ] || is_template "$current_origin"; then
+    warn "origin not set; set it later with: git remote set-url origin <your-repo-url>"
+    ORIGIN_OK=false
+fi
+
+# --- commit and next steps ---------------------------------------------------------------
+branch="$(git -C "$ROOT" symbolic-ref --short -q HEAD || true)"
+if $CHANGED && $COMMIT; then
+    git -C "$ROOT" add -- .gitconfig
+    git -C "$ROOT" commit -q -m "Set git identity" -- .gitconfig
+    info "Committed .gitconfig"
+elif $CHANGED; then
+    info "Commit it with: git add .gitconfig && git commit -m 'Set git identity'"
+fi
+if ! $CHANGED && $ORIGIN_OK; then info "Nothing to change; your setup is already initialised"; fi
+if [ -n "$branch" ]; then info "Publish with: git push -u origin $branch"; fi
+info "Then run dot-doctor to check everything"
+exit 0
