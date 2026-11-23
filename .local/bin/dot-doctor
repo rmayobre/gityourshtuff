@@ -5,8 +5,8 @@
 #
 # Checks git, the worktree and bare repo, your remote, the whitelist .gitignore, the shtuff
 # submodule, PATH, placeholder values, allowed-but-untracked files, uncommitted changes, and
-# secrets in tracked files. Prints "ok", "warn" or "FAIL" per check; exits 1 if any check
-# fails (warnings alone don't fail).
+# secrets in tracked files. Each check prints as [info] (fine), [warn] (worth fixing) or
+# [error] (broken); exits 1 if any check is broken (warnings alone don't fail).
 set -uo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
@@ -18,9 +18,10 @@ case "${1:-}" in
 esac
 
 PASS=0; WARNS=0; FAILS=0
-ok()   { PASS=$((PASS + 1));   info "ok    $*"; }
-bad()  { WARNS=$((WARNS + 1)); warn "warn  $*"; }
-fail() { FAILS=$((FAILS + 1)); error "FAIL  $*"; }
+# shtuff's level prefix ([info] / [warn] / [error]) already marks the result of each check.
+ok()   { PASS=$((PASS + 1));   info "$*"; }
+bad()  { WARNS=$((WARNS + 1)); warn "$*"; }
+fail() { FAILS=$((FAILS + 1)); error "$*"; }
 
 # --- git ---------------------------------------------------------------------------------
 if ! command -v git >/dev/null; then
