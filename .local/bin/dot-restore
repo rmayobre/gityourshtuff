@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Restore dotfiles from a backup made by dot-backup (or the one the installer made of the
+# files it replaced).
+#
+# Usage: dot-restore [--list] [--dry-run] [--yes] [BACKUP]
+#
+#   BACKUP     A folder name in ~/.dotfiles-backup, or a path. Default: the newest backup.
+#   --list     List available backups and exit.
+#   --dry-run  Show which files would change and exit.
+#   --yes      Don't ask for confirmation.
+#
+# Files in the backup overwrite the ones in your home directory; files that aren't in the
+# backup are left alone. Before overwriting, a "pre-restore" backup of your current state is
+# made, so a restore can itself be undone. Submodules aren't restored: afterwards run
+# "git submodule update --init" (or dot-update).
+set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
+
+LIST=false
+DRY=false
+YES=false
+TARGET=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --list) LIST=true ;;
+        --dry-run) DRY=true ;;
+        --yes|-y) YES=true ;;
+        -h|--help) sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -*) error "unknown option: $1 (try --help)"; exit 1 ;;
+        *) [ -z "$TARGET" ] || { error "only one backup can be restored at a time"; exit 1; }
+           TARGET="$1" ;;
+    esac
+    shift
+done
+
+command -v tar >/dev/null || { error "tar is required"; exit 1; }
+ROOT="$(repo_root)"
+BACKUPS="$(backup_root)"
+
+# Newest first; names start with a sortable timestamp.
+list_backups() {
+    [ -d "$BACKUPS" ] || return 0
+    local d
+    for d in "$BACKUPS"/*/; do
+        [ -d "$d" ] && basename "$d"
+    done | sort -r
+}
+
+if $LIST; then
+    names="$(list_backups)"
+    [ -n "$names" ] || { info "No backups in $BACKUPS"; exit 0; }
+    printf '%s\n' "$names"
+    exit 0
+fi
+
+if [ -z "$TARGET" ]; then
+    TARGET="$(list_backups | head -n 1)"
+    [ -n "$TARGET" ] || { error "no backups found in $BACKUPS; run dot-backup first"; exit 1; }
+fi
+case "$TARGET" in
+    */*) SRC="$TARGET" ;;
+    *)   SRC="$BACKUPS/$TARGET" ;;
+esac
+[ -d "$SRC" ] || { error "backup not found: $SRC (see: dot-restore --list)"; exit 1; }
+SRC="$(cd "$SRC" && pwd)"
+
+# Files that would change: present in the backup and missing or different on disk.
+changed="$(mktemp)"
+trap 'rm -f "$changed"' EXIT
+( cd "$SRC" && find . \( -type f -o -type l \) ! -path ./MANIFEST.txt | sed 's#^\./##' | sort ) |
+while IFS= read -r f; do
+    if [ ! -e "$ROOT/$f" ] && [ ! -L "$ROOT/$f" ]; then
+        echo "new      $f"
+    elif ! cmp -s "$SRC/$f" "$ROOT/$f"; then
+        echo "changed  $f"
+    fi
+done >"$changed"
+
+total="$(cd "$SRC" && find . \( -type f -o -type l \) ! -path ./MANIFEST.txt | wc -l | tr -d ' ')"
+info "Backup: $SRC ($total files, $(wc -l <"$changed" | tr -d ' ') differ from your current files)"
+[ -f "$SRC/MANIFEST.txt" ] && info "Made: $(grep '^created:' "$SRC/MANIFEST.txt" | sed 's/^created: *//')"
+
+if [ ! -s "$changed" ]; then
+    info "Your files already match this backup; nothing to restore"
+    exit 0
+fi
+cat "$changed"
+$DRY && exit 0
+
+if ! $YES; then
+    confirm "Restore these files into $ROOT?" || { info "Cancelled"; exit 0; }
+fi
+
+safety="$BACKUPS/$(date +%Y%m%d-%H%M%S)-pre-restore"
+run_monitored "Saving current state first" snapshot_dotfiles "$safety" || exit 1
+info "Current state saved to $safety"
+
+restore_files() { tar -C "$SRC" --exclude ./MANIFEST.txt -cf - . | tar -C "$ROOT" -xf -; }
+run_monitored "Restoring files" restore_files || exit 1
+
+info "Restored $total files from ${SRC##*/}"
+info "Submodules were not touched; run: git submodule update --init"

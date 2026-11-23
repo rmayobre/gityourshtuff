@@ -52,3 +52,48 @@ run_monitored() {
     rm -f "$out"
     return "$status"
 }
+
+# backup_root: where backups live (override with DOTFILES_BACKUP_DIR). The installer also
+# stores the files it replaces here.
+backup_root() {
+    printf '%s\n' "${DOTFILES_BACKUP_DIR:-$HOME/.dotfiles-backup}"
+}
+
+# list_dotfiles OUTFILE: write the NUL-separated paths that make up your current dotfiles
+# state: tracked files plus new files the whitelist allows, as they are on disk now (so
+# uncommitted edits count). Skips deleted and sparse-excluded files, and submodules, which
+# are recorded by commit in the manifest instead.
+list_dotfiles() {
+    local root path
+    root="$(repo_root)"
+    : >"$1"
+    while IFS= read -r -d '' path; do
+        { [ -e "$root/$path" ] || [ -L "$root/$path" ]; } || continue
+        [ -d "$root/$path" ] && [ -e "$root/$path/.git" ] && continue
+        printf '%s\0' "$path" >>"$1"
+    done < <(git -C "$root" ls-files -z --cached --others --exclude-standard)
+}
+
+# snapshot_dotfiles DEST: copy the files from list_dotfiles into DEST, keeping paths and
+# permissions, and write DEST/MANIFEST.txt describing the state. Uses a tar pipe, which
+# behaves the same with GNU and BSD tar.
+snapshot_dotfiles() {
+    local dest="$1" root list
+    root="$(repo_root)"
+    list="$(mktemp)"
+    list_dotfiles "$list"
+    mkdir -p "$dest"
+    tar -C "$root" --null -T "$list" -cf - | tar -C "$dest" -xf -
+    {
+        echo "created:    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "host:       $(uname -n) ($(uname -s))"
+        echo "root:       $root"
+        echo "branch:     $(git -C "$root" symbolic-ref --short -q HEAD || echo '(detached)')"
+        echo "commit:     $(git -C "$root" rev-parse HEAD 2>/dev/null || echo '(none)')"
+        if has_tracked_changes "$root"; then echo "uncommitted: yes"; else echo "uncommitted: no"; fi
+        echo "files:      $(tr -cd '\0' <"$list" | wc -c | tr -d ' ')"
+        echo "submodules:"
+        git -C "$root" submodule status 2>/dev/null | sed 's/^/  /'
+    } >"$dest/MANIFEST.txt"
+    rm -f "$list"
+}
