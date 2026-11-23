@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# Check that your dotfiles setup is healthy and report anything that needs attention.
+#
+# Usage: dot-doctor
+#
+# Checks git, the worktree and bare repo, your remote, the whitelist .gitignore, the shtuff
+# submodule, PATH, placeholder values, allowed-but-untracked files, uncommitted changes, and
+# secrets in tracked files. Prints "ok", "warn" or "FAIL" per check; exits 1 if any check
+# fails (warnings alone don't fail).
+set -uo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
+
+case "${1:-}" in
+    "") ;;
+    -h|--help) sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) error "unknown option: $1 (try --help)"; exit 1 ;;
+esac
+
+PASS=0; WARNS=0; FAILS=0
+ok()   { PASS=$((PASS + 1));   info "ok    $*"; }
+bad()  { WARNS=$((WARNS + 1)); warn "warn  $*"; }
+fail() { FAILS=$((FAILS + 1)); error "FAIL  $*"; }
+
+# --- git ---------------------------------------------------------------------------------
+if ! command -v git >/dev/null; then
+    fail "git is not installed"
+    exit 1
+fi
+ver="$(git --version | sed -n 's/^git version \([0-9]*\)\.\([0-9]*\).*/\1 \2/p')"
+set -- $ver
+if [ "${1:-0}" -gt 2 ] || { [ "${1:-0}" -eq 2 ] && [ "${2:-0}" -ge 30 ]; }; then
+    ok "git $(git --version | sed 's/^git version //') (2.30+ needed)"
+else
+    fail "git $(git --version | sed 's/^git version //') is older than 2.30"
+fi
+
+# --- worktree and bare repo --------------------------------------------------------------
+ROOT="$(repo_root 2>/dev/null || true)"
+if [ -z "$ROOT" ] || ! git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    fail "no git worktree found; run the installer (see README)"
+    printf '\n'; error "$FAILS check(s) failed"; exit 1
+fi
+if [ -f "$ROOT/.git" ]; then
+    COMMON="$(cd "$ROOT" && cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+    if [ "$(git --git-dir="$COMMON" rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
+        ok "worktree $ROOT uses bare repo $COMMON"
+    else
+        fail "$COMMON is not a bare repository"
+    fi
+else
+    bad "$ROOT/.git is a directory, not a link to a bare repo; this isn't the standard layout"
+fi
+
+branch="$(git -C "$ROOT" symbolic-ref --short -q HEAD || true)"
+if [ -n "$branch" ]; then ok "on branch $branch"; else bad "detached HEAD; dot-update needs a branch"; fi
+
+# --- remote ------------------------------------------------------------------------------
+url="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
+case "$url" in
+    "") bad "no 'origin' remote; add one with: git remote add origin <your-repo-url>" ;;
+    *rmayobre/gityourshtuff*) bad "origin is the template ($url); create your own repo from it and point origin there" ;;
+    *) ok "origin is $url" ;;
+esac
+
+# --- whitelist .gitignore ----------------------------------------------------------------
+if [ -f "$ROOT/.gitignore" ]; then
+    first="$(grep -v '^[[:space:]]*#' "$ROOT/.gitignore" | grep -v '^[[:space:]]*$' | head -n 1)"
+    if [ "$first" = "*" ]; then ok ".gitignore is a whitelist (starts with *)"
+    else fail ".gitignore doesn't start with '*'; everything in your home could be tracked"; fi
+else
+    fail "$ROOT/.gitignore is missing"
+fi
+
+# --- shtuff ------------------------------------------------------------------------------
+SH="$ROOT/.local/share/shtuff"
+if [ -r "$SH/shtuff.sh" ]; then
+    tag="$(git -C "$SH" describe --tags --exact-match 2>/dev/null || true)"
+    if [ -n "$tag" ]; then ok "shtuff is at release $tag"
+    else bad "shtuff isn't on a release tag; run: dot-update --latest"; fi
+else
+    fail "shtuff submodule missing; run: git submodule update --init"
+fi
+
+# --- environment -------------------------------------------------------------------------
+case ":$PATH:" in
+    *":$ROOT/.local/bin:"*) ok "$ROOT/.local/bin is on PATH" ;;
+    *) bad "$ROOT/.local/bin isn't on PATH in this shell; open a new shell (env.sh adds it)" ;;
+esac
+[ -r "$ROOT/.config/shell/env.sh" ] && ok "shell config present (.config/shell)" \
+    || bad ".config/shell/env.sh is missing"
+
+# --- placeholders ------------------------------------------------------------------------
+if [ -f "$ROOT/.gitconfig" ] && grep -Eq 'Your Name|you@example\.com' "$ROOT/.gitconfig"; then
+    bad ".gitconfig still has the placeholder name/email; edit it before committing"
+else
+    ok ".gitconfig has no template placeholders"
+fi
+
+# --- sparse checkout ---------------------------------------------------------------------
+if [ "$(git -C "$ROOT" config --get core.sparseCheckout 2>/dev/null)" = "true" ]; then
+    ok "sparse checkout active (repo-only files kept out of $ROOT)"
+fi
+
+# --- state of the repo -------------------------------------------------------------------
+untracked="$(git -C "$ROOT" ls-files --others --exclude-standard | head -n 6)"
+if [ -n "$untracked" ]; then
+    bad "files allowed by .gitignore but not tracked yet (git add them):"
+    printf '        %s\n' $untracked
+else
+    ok "no untracked files the whitelist allows"
+fi
+if has_tracked_changes "$ROOT"; then
+    bad "uncommitted changes to tracked files (dot-update refuses to run until committed)"
+else
+    ok "no uncommitted changes"
+fi
+
+# --- secrets -----------------------------------------------------------------------------
+leaks=""
+while IFS= read -r -d '' f; do
+    is_sensitive "$f" && leaks="$leaks $f"
+done < <(git -C "$ROOT" ls-files -z)
+hits="$(git -C "$ROOT" grep -I -l -E -e "$SECRET_PATTERN" 2>/dev/null || true)"
+if [ -n "$leaks$hits" ]; then
+    fail "tracked files that look like secrets:$leaks $(printf '%s ' $hits)"
+    printf '        remove them with: git rm --cached <file>, and rotate the secret if it was pushed\n'
+else
+    ok "no secrets found in tracked files"
+fi
+
+# --- backups -----------------------------------------------------------------------------
+n=0; [ -d "$(backup_root)" ] && n="$(find "$(backup_root)" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+ok "$n backup(s) in $(backup_root)"
+
+printf '\n'
+info "$PASS ok, $WARNS warning(s), $FAILS failure(s)"
+[ "$FAILS" -eq 0 ]
