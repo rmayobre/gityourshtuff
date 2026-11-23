@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
-# Shared setup and git helpers for scripts in this directory. Source it; don't execute it.
-#   source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+# Shared setup and git helpers for GitYourShtuff commands (~/.local/bin/gys-*).
+# Source it; don't execute it:
+#   source "$(dirname "${BASH_SOURCE[0]}")/../share/gityourshtuff/common.sh"
 #
 # Logging and other general-purpose utilities come from shtuff (info, warn, error, confirm,
 # ...); this file only loads it and adds helpers specific to this dotfiles repo.
 
-# repo_root: the top-level directory of the dotfiles checkout (the parent of scripts/).
+_gys_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# repo_root: the top-level directory of the dotfiles checkout (normally $HOME).
 repo_root() {
-    cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd
+    git -C "$_gys_dir" rev-parse --show-toplevel
 }
 
-# Load shtuff from the submodule. Plain printf here because shtuff isn't available yet.
-_shtuff="$(repo_root)/.shtuff/shtuff.sh"
+# Load shtuff from the submodule (~/.local/share/shtuff). Plain printf here because shtuff
+# isn't available yet.
+_shtuff="$_gys_dir/../shtuff/shtuff.sh"
 if [ ! -r "$_shtuff" ]; then
     printf 'error: %s not found; run: git submodule update --init\n' "$_shtuff" >&2
     return 1 2>/dev/null || exit 1

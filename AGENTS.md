@@ -6,7 +6,7 @@ Guidance for AI agents working in this repository.
 
 A **template** for personal dotfiles, built on the
 [shtuff](https://github.com/rmayobre/shtuff) Bash framework (git submodule at
-`.shtuff/`). Users install it as a **bare repo + a git worktree whose path is
+`.local/share/shtuff/`). Users install it as a **bare repo + a git worktree whose path is
 `$HOME`**, so tracked files sit at the repo root exactly where they live in `$HOME`
 (`.bashrc`, `.config/...`).
 
@@ -16,13 +16,14 @@ Keep it minimal: templated file structure, as little scripting as possible.
 
 | Path | Purpose |
 |------|---------|
-| `.shtuff/` | shtuff framework submodule, pinned to a release tag (not `main`). Do not edit; bump by checking out a newer tag. |
-| `.bashrc`, `.zshrc`, `.profile` | Shell startup files that source `.shtuff/shtuff.sh`. |
+| `.local/share/shtuff/` | shtuff framework submodule, pinned to a release tag (not `main`). Do not edit; bump by checking out a newer tag. |
+| `.bashrc`, `.zshrc`, `.profile` | Shell startup files that source `.local/share/shtuff/shtuff.sh`. |
 | `.config/shell/` | `env.sh`, `aliases.sh`, `functions.sh` shared by bash and zsh; sourced from the rc files (env also from `.profile`). |
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
 | `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). |
-| `scripts/` | Helper scripts run after install. `common.sh` loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`) plus `run_monitored`, a thin wrapper that runs a command under shtuff's `monitor` spinner; source it from every script. Don't add logging or other generic utilities there; shtuff already provides them. `update.sh` pulls and updates submodules. New scripts are already allowed in `.gitignore` (`!/scripts/**`). |
+| `.local/bin/` | Commands, prefixed `gys-` so they don't clash with shtuff functions (`update`, `install`, ...). `gys-update` pulls and updates submodules. New commands are already allowed in `.gitignore` (`!/.local/bin/**`). |
+| `.local/share/gityourshtuff/` | `common.sh`: loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`) plus `run_monitored`, a thin wrapper that runs a command under shtuff's `monitor` spinner. Source it from every command. Don't add logging or other generic utilities there; shtuff already provides them. |
 | `README.md` | Install instructions (the `curl ... \| bash` one-liner). |
 
 ## Branches
@@ -37,6 +38,8 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
 **Any new tracked file or directory must be explicitly allowed with a `!` rule.**
 
 - Allow a top-level file: `!/.vimrc`
+- Under `.local/`, only `bin/`, `share/gityourshtuff/` and `share/shtuff` are allowed; the rest
+  of `.local` (other tools' data) must stay ignored.
 - Allow a directory: re-include each level, e.g. `!/.config/`, `/.config/*`,
   then `!/.config/nvim/` and `!/.config/nvim/**`.
 - Verify with `git check-ignore -v <path>` (no output for a tracked path means allowed
@@ -46,9 +49,9 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
 ## shtuff conventions
 
 - Source `shtuff.sh` locally from the submodule; do not use the remote variant in dotfiles.
-- Use shtuff functions (`info`, `warn`, `error`, `confirm`, `install`, ...) rather than reimplementing. Scripts in `scripts/` log with these, never with `echo`/`printf`; shtuff's `error` doesn't exit, so follow it with `exit 1`.
-  See `.shtuff/AGENTS.md` for the API.
-- **Every script in `scripts/` must source `scripts/common.sh` (which loads shtuff)** and use
+- Use shtuff functions (`info`, `warn`, `error`, `confirm`, `install`, ...) rather than reimplementing. Commands in `.local/bin/` log with these, never with `echo`/`printf`; shtuff's `error` doesn't exit, so follow it with `exit 1`.
+  See `.local/share/shtuff/AGENTS.md` for the API.
+- **Every command in `.local/bin/` must source `.local/share/gityourshtuff/common.sh` (which loads shtuff)** and use
   shtuff for logging, prompts (`confirm`, ...), file operations (`copy`, `move`, `delete`) and
   long-running or network steps (`run_monitored`, which wraps `monitor`).
 - The only exceptions are `install.sh` (it runs via `curl` before the repo or shtuff exist)
@@ -58,9 +61,9 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
 
 ## Portability (Linux and macOS)
 
-Everything outside `.shtuff/` must run on macOS as well as Linux with BSD userland.
-`install.sh` and the shell startup files must work on macOS's stock bash 3.2. Scripts in
-`scripts/` source shtuff, so they need whatever bash shtuff requires (currently 4+; shtuff's
+Everything outside `.local/share/shtuff/` must run on macOS as well as Linux with BSD userland.
+`install.sh` and the shell startup files must work on macOS's stock bash 3.2. Commands in
+`.local/bin/` source shtuff, so they need whatever bash shtuff requires (currently 4+; shtuff's
 macOS support is tracked in the shtuff repo).
 
 - Avoid bash 4+ features (`mapfile`, `declare -A`, `${var,,}`, `&>>`).

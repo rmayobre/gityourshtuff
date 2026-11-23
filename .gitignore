@@ -6,17 +6,22 @@
 !/.gitignore
 !/.gitmodules
 !/install.sh
-
-# Helper scripts
-!/scripts/
-!/scripts/**
 !/README.md
 !/LICENSE
 !/AGENTS.md
 !/CLAUDE.md
 
-# shtuff framework (submodule)
-!/.shtuff
+# ~/.local -- commands, shared helpers and the shtuff framework (submodule).
+# Re-include each level; everything else in .local (other tools' data) stays ignored.
+!/.local/
+/.local/*
+!/.local/bin/
+!/.local/bin/**
+!/.local/share/
+/.local/share/*
+!/.local/share/gityourshtuff/
+!/.local/share/gityourshtuff/**
+!/.local/share/shtuff
 
 # Shell
 !/.profile

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Update your dotfiles and their submodules.
 #
-# Usage: scripts/update.sh [--latest] [--commit]
+# Usage: gys-update [--latest] [--commit]
 #
 #   (no flags)  Pull your repo's latest changes, then sync submodules to the
 #               commits your repo pins.
@@ -10,7 +10,7 @@
 #   --commit    With --latest, commit the staged submodule bumps.
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../share/gityourshtuff/common.sh"
 
 LATEST=false
 COMMIT=false

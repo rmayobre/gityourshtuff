@@ -1,7 +1,7 @@
 # GitYourShtuff
 
 A template for your dotfiles, built with the [shtuff](https://github.com/rmayobre/shtuff)
-shell framework (included as a git submodule in `.shtuff/`).
+shell framework (included as a git submodule in `.local/share/shtuff/`).
 
 Dotfiles are managed with a **bare repository** plus a **git worktree rooted at `$HOME`**.
 Your home directory *is* the checkout, with no symlinks or copy scripts. A whitelist
@@ -84,15 +84,17 @@ Then `git add .vimrc .gitignore && git commit`. Check with `git check-ignore -v 
 
 ## Updating
 
-Pull your latest changes and sync the submodules with the update script:
+Pull your latest changes and sync the submodules with the update command (`~/.local/bin` is on your
+`PATH` once `env.sh` has loaded, so open a new shell after installing):
 
 ```bash
-~/scripts/update.sh                     # pull, then sync submodules to the pinned commits
-~/scripts/update.sh --latest            # also move submodules to their newest stable release tag
-~/scripts/update.sh --latest --commit   # ...and commit the bump
+gys-update                     # pull, then sync submodules to the pinned commits
+gys-update --latest            # also move submodules to their newest stable release tag
+gys-update --latest --commit   # ...and commit the bump
 ```
 
-The shtuff submodule is pinned to a release tag (not `main`). `--latest` fetches tags, checks
+Commands live in `~/.local/bin` (prefixed `gys-`) and shared helpers in
+`~/.local/share/gityourshtuff/`. The shtuff submodule is pinned to a release tag (not `main`). `--latest` fetches tags, checks
 out the newest stable `vX.Y.Z` tag (ignoring betas) and stages the change. The script refuses
 to run with uncommitted changes to tracked files.
 
