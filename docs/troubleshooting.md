@@ -17,11 +17,11 @@ anything is broken; warnings alone don't fail it.
 | git | Version 2.30 or newer | Upgrade git (on macOS: `xcode-select --install` or Homebrew) |
 | Worktree | `~/.git` is a link to a bare repo | Re-run the installer, or see [Installation](install.md) |
 | Branch | You're on a branch, not a detached HEAD | `git switch main` (`dot-update` needs a branch) |
-| `origin` | A remote exists and isn't the template | Create your own repo ([Creating your own repo](templating.md)), then `git remote set-url origin <url>` |
+| `origin` | A remote exists and isn't the template | Create your own repo ([Creating your own repo](templating.md)), then run `dot-init` |
 | `.gitignore` | The first rule is `*` | Restore it: the whitelist is what keeps the rest of `~` out of git |
 | shtuff | The submodule is present and on a release tag | `git submodule update --init`, or `dot-update --latest` |
 | `PATH` | `~/.local/bin` is on it in this shell | Open a new shell; `env.sh` adds it |
-| `.gitconfig` | No `Your Name` / `you@example.com` placeholders | Edit the file |
+| `.gitconfig` | No `Your Name` / `you@example.com` placeholders | Run `dot-init` |
 | Sparse checkout | Reports whether repo-only files are hidden | Informational |
 | Untracked files | Files the whitelist allows but git doesn't track | `git add <file>` or `dot-add <path>` |
 | Uncommitted changes | Tracked files you changed | Commit them; `dot-update` refuses to run otherwise |

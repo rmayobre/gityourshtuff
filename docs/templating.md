@@ -37,7 +37,8 @@ cd <repo>
 
 Then:
 
-- **`.gitconfig`:** replace the placeholder name and email with your own.
+- **`.gitconfig`:** you can edit the placeholder name and email now, or skip this and let
+  `dot-init` set them after you install (step 4).
 - **`.bashrc`, `.zshrc`, `.profile`:** keep, trim, or extend them. They source the shtuff
   framework and your shell config.
 - **`.config/shell/`:** add your aliases, functions and variables. See
@@ -72,11 +73,39 @@ gh api repos/<user>/<repo>/contents/install.sh -H "Accept: application/vnd.githu
 DOTFILES_URL=git@github.com:<user>/<repo>.git bash install.sh
 ```
 
-## 4. Publish the docs (optional)
+## 4. Run `dot-init`
+
+On the first machine, open a new shell after the install and run:
+
+```bash
+dot-init
+```
+
+It asks only for what is still unset:
+
+- **Your name and email** replace the template's `Your Name` and `you@example.com` in
+  `~/.gitconfig`, so your commits are attributed to you.
+- **The URL of your repo** becomes `origin`. If `origin` still points at the template, it warns you,
+  and it refuses the template's own URL.
+
+Everything can also be passed as options, which is handy for scripts:
+
+```bash
+dot-init --name "Ada Lovelace" --email ada@example.org          --origin git@github.com:ada/dotfiles.git --commit
+```
+
+`--commit` commits the `.gitconfig` change. Nothing is pushed for you: finish with
+`git push -u origin <branch>`, then run `dot-doctor` to check the setup.
+
+Running it again is safe. Values that are already set are kept, and `--reconfigure` asks about
+everything again. Other machines you install on get your identity from your repo, so they don't
+need this step.
+
+## 5. Publish the docs (optional)
 
 To host this manual for your own repo, see [Publishing the docs site](publishing.md).
 
-## 5. Keep it up to date
+## 6. Keep it up to date
 
 Edit files in your home directory as usual and commit from there. Pull changes and bump the
 shtuff submodule to its newest release with the update script; see [Updating](updating.md):

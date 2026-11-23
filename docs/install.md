@@ -22,7 +22,8 @@ curl -fsSL https://raw.githubusercontent.com/<user>/<repo>/main/install.sh \
    repo-only files (`README.md`, `LICENSE`, `AGENTS.md`, `CLAUDE.md`, `install.sh`) out of your
    home directory. They stay in the repo.
 
-Open a new shell afterwards.
+Open a new shell afterwards and run `dot-init` to set your git identity and `origin` (see
+[Creating your own repo](templating.md)).
 
 ## Options
 
