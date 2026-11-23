@@ -22,7 +22,7 @@ Keep it minimal: templated file structure, as little scripting as possible.
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
 | `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). |
-| `scripts/` | Helper scripts run after install. `common.sh` holds shared helpers (`log`, `die`, ...); source it rather than duplicating logic. `update.sh` pulls and updates submodules. New scripts are already allowed in `.gitignore` (`!/scripts/**`). |
+| `scripts/` | Helper scripts run after install. `common.sh` loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`); source it from every script. Don't add logging or other generic utilities there; shtuff already provides them. `update.sh` pulls and updates submodules. New scripts are already allowed in `.gitignore` (`!/scripts/**`). |
 | `README.md` | Install instructions (the `curl ... \| bash` one-liner). |
 
 ## Branches
@@ -46,13 +46,16 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
 ## shtuff conventions
 
 - Source `shtuff.sh` locally from the submodule; do not use the remote variant in dotfiles.
-- Use shtuff functions (`info`, `warn`, `error`, `install`, ...) rather than reimplementing.
+- Use shtuff functions (`info`, `warn`, `error`, `confirm`, `install`, ...) rather than reimplementing. Scripts in `scripts/` log with these, never with `echo`/`printf`; shtuff's `error` doesn't exit, so follow it with `exit 1`.
   See `.shtuff/AGENTS.md` for the API.
 - Keep shell files POSIX-safe where possible (`.profile`); Bash-only in `.bashrc`.
 
 ## Portability (Linux and macOS)
 
-Everything outside `.shtuff/` must run on macOS as well as Linux: bash 3.2 and BSD userland.
+Everything outside `.shtuff/` must run on macOS as well as Linux with BSD userland.
+`install.sh` and the shell startup files must work on macOS's stock bash 3.2. Scripts in
+`scripts/` source shtuff, so they need whatever bash shtuff requires (currently 4+; shtuff's
+macOS support is tracked in the shtuff repo).
 
 - Avoid bash 4+ features (`mapfile`, `declare -A`, `${var,,}`, `&>>`).
 - Avoid GNU-only flags: `sed -i` without a suffix argument, `readlink -f`, `sort -V`,
