@@ -22,7 +22,7 @@ Keep it minimal: templated file structure, as little scripting as possible.
 | `.gitconfig` | Placeholder identity/config. |
 | `.config/` | Per-app config; whitelist each app in `.gitignore`. |
 | `install.sh` | Remote-runnable installer: bare repo + worktree at `$HOME`, backs up conflicts. Keep it self-contained (runs before shtuff exists). |
-| `scripts/` | Helper scripts run after install. `common.sh` loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`); source it from every script. Don't add logging or other generic utilities there; shtuff already provides them. `update.sh` pulls and updates submodules. New scripts are already allowed in `.gitignore` (`!/scripts/**`). |
+| `scripts/` | Helper scripts run after install. `common.sh` loads shtuff and holds only repo-specific helpers (`repo_root`, `has_tracked_changes`, `latest_stable_tag`) plus `run_monitored`, a thin wrapper that runs a command under shtuff's `monitor` spinner; source it from every script. Don't add logging or other generic utilities there; shtuff already provides them. `update.sh` pulls and updates submodules. New scripts are already allowed in `.gitignore` (`!/scripts/**`). |
 | `README.md` | Install instructions (the `curl ... \| bash` one-liner). |
 
 ## Branches
@@ -48,6 +48,12 @@ The worktree is `$HOME`, so `.gitignore` starts with `*` and ignores everything.
 - Source `shtuff.sh` locally from the submodule; do not use the remote variant in dotfiles.
 - Use shtuff functions (`info`, `warn`, `error`, `confirm`, `install`, ...) rather than reimplementing. Scripts in `scripts/` log with these, never with `echo`/`printf`; shtuff's `error` doesn't exit, so follow it with `exit 1`.
   See `.shtuff/AGENTS.md` for the API.
+- **Every script in `scripts/` must source `scripts/common.sh` (which loads shtuff)** and use
+  shtuff for logging, prompts (`confirm`, ...), file operations (`copy`, `move`, `delete`) and
+  long-running or network steps (`run_monitored`, which wraps `monitor`).
+- The only exceptions are `install.sh` (it runs via `curl` before the repo or shtuff exist)
+  and the POSIX files sourced by login shells (`.profile`, `.zprofile`,
+  `.config/shell/env.sh`), which must stay fast and shtuff-free.
 - Keep shell files POSIX-safe where possible (`.profile`); Bash-only in `.bashrc`.
 
 ## Portability (Linux and macOS)
