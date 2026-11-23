@@ -6,6 +6,10 @@
 !/.gitignore
 !/.gitmodules
 !/install.sh
+
+# Helper scripts
+!/scripts/
+!/scripts/**
 !/README.md
 !/LICENSE
 !/AGENTS.md
