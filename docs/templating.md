@@ -78,11 +78,9 @@ To host this manual for your own repo, see [Publishing the docs site](publishing
 
 ## 5. Keep it up to date
 
-Edit files in your home directory as usual and commit from there. The shtuff framework is
-pinned to a release tag. To move to a newer release:
+Edit files in your home directory as usual and commit from there. Pull changes and bump the
+shtuff submodule to its newest release with the update script; see [Updating](updating.md):
 
 ```bash
-git -C ~/.shtuff fetch --tags
-git -C ~/.shtuff checkout <new-tag>
-git add .shtuff && git commit -m "Bump shtuff to <new-tag>"
+~/scripts/update.sh --latest
 ```
