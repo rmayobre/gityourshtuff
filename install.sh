@@ -75,7 +75,7 @@ git config status.showUntrackedFiles no
 git checkout -f "$DOTFILES_REF"
 git submodule update --init --recursive
 
-log "Done. Open a new shell to load your dotfiles."
+log "Done. Open a new shell to load your dotfiles, then run: dot-init"
 if [ -d "$BACKUP_DIR" ]; then
     log "Previous files saved in $BACKUP_DIR"
     log "Put them back with: dot-restore ${BACKUP_DIR##*/}"

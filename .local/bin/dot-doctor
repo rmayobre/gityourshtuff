@@ -59,8 +59,8 @@ if [ -n "$branch" ]; then ok "on branch $branch"; else bad "detached HEAD; dot-u
 # --- remote ------------------------------------------------------------------------------
 url="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
 case "$url" in
-    "") bad "no 'origin' remote; add one with: git remote add origin <your-repo-url>" ;;
-    *rmayobre/gityourshtuff*) bad "origin is the template ($url); create your own repo from it and point origin there" ;;
+    "") bad "no 'origin' remote; run: dot-init" ;;
+    *rmayobre/gityourshtuff*) bad "origin is the template ($url); create your own repo from it, then run: dot-init" ;;
     *) ok "origin is $url" ;;
 esac
 
@@ -93,7 +93,7 @@ esac
 
 # --- placeholders ------------------------------------------------------------------------
 if [ -f "$ROOT/.gitconfig" ] && grep -Eq 'Your Name|you@example\.com' "$ROOT/.gitconfig"; then
-    bad ".gitconfig still has the placeholder name/email; edit it before committing"
+    bad ".gitconfig still has the placeholder name/email; run: dot-init"
 else
     ok ".gitconfig has no template placeholders"
 fi

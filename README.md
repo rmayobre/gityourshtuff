@@ -10,8 +10,9 @@ Your home directory *is* the checkout, with no symlinks or copy scripts. A white
 ## Use as your own
 
 1. Click **Use this template** (or fork) on GitHub to create your own dotfiles repo.
-2. Replace the placeholders (`.gitconfig`, shell files) with your own and push.
-3. Run the installer below on each machine, using your repo's URL.
+2. Run the installer below on your first machine, using your repo's URL.
+3. Run `dot-init` to set your git identity and point `origin` at your repo, then commit and push.
+   Other machines only need the installer.
 
 ## Install
 
@@ -49,6 +50,19 @@ curl -fsSL https://raw.githubusercontent.com/<user>/<repo>/main/install.sh -o in
 less install.sh
 DOTFILES_URL=https://github.com/<user>/<repo>.git bash install.sh
 ```
+
+## First-run setup
+
+`dot-init` replaces the template's placeholder identity in `~/.gitconfig` and makes sure `origin`
+points at your own repo, asking only for what is still unset:
+
+```bash
+dot-init                                  # asks for your name, email and repo URL
+dot-init --name "Ada" --email ada@example.org --origin git@github.com:ada/dotfiles.git --commit
+```
+
+It refuses the template's own URL as `origin`, never pushes, and can be run again safely
+(`--reconfigure` asks about everything again). Then `git push -u origin <branch>` and run `dot-doctor`.
 
 ## macOS
 

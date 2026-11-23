@@ -49,6 +49,7 @@ valid_email() {
 }
 
 CHANGED=false
+ORIGIN_OK=true
 
 # --- name --------------------------------------------------------------------------------
 current_name="$(git config --file "$CONFIG" user.name 2>/dev/null || true)"
@@ -117,6 +118,7 @@ if [ -n "$ORIGIN" ]; then
     [ "$ORIGIN" = "$current_origin" ] || info "Set origin: $ORIGIN"
 elif [ -z "$current_origin" ] || is_template "$current_origin"; then
     warn "origin not set; set it later with: git remote set-url origin <your-repo-url>"
+    ORIGIN_OK=false
 fi
 
 # --- commit and next steps ---------------------------------------------------------------
@@ -128,7 +130,7 @@ if $CHANGED && $COMMIT; then
 elif $CHANGED; then
     info "Commit it with: git add .gitconfig && git commit -m 'Set git identity'"
 fi
-$CHANGED || info "Nothing to change; your setup is already initialised"
+if ! $CHANGED && $ORIGIN_OK; then info "Nothing to change; your setup is already initialised"; fi
 if [ -n "$branch" ]; then info "Publish with: git push -u origin $branch"; fi
 info "Then run dot-doctor to check everything"
 exit 0
