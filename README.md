@@ -83,6 +83,9 @@ dot-plugin run init        # or let dot-init do it
   (`--strict` turns it into exit status 1). There is no time limit.
 - A plugin that needs root has an empty `needs-sudo` file; the password is asked for before its
   hook starts. A plugin may ship an `env.sh` (a `PATH` entry, say) that login shells source.
+- `dot-backup` also asks installed plugins that have a `backup` hook for their data (stored under
+  `.plugin-data/NAME/` in the snapshot, and scanned for secrets); `dot-restore` hands it back to
+  each installed plugin's `restore` hook. Both accept `--no-plugins` and `--strict`.
 - Examples ship disabled in `plugins.list`: `flutter`, `docker` and `nvidia-drivers`.
 - `plugins.list` is shared by all your machines. A git-ignored `plugins.local` next to it adds
   (`name`) or removes (`-name`) plugins on one machine.

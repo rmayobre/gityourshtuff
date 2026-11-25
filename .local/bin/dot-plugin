@@ -67,7 +67,7 @@ case "$cmd" in
     run)
         [ $# -ge 1 ] || { error "usage: dot-plugin run HOOK [NAME...]"; exit 1; }
         hook="$1"; shift
-        case " $PLUGIN_HOOKS " in *" $hook "*) ;; *) error "unknown hook '$hook' (use one of: $PLUGIN_HOOKS)"; exit 1 ;; esac
+        case " $PLUGIN_RUN_HOOKS " in *" $hook "*) ;; *) error "unknown hook '$hook' (use one of: $PLUGIN_RUN_HOOKS; backup and restore run from dot-backup and dot-restore)"; exit 1 ;; esac
         run_plugins "$hook" "$@"
         [ "$PLUGINS_FAILED" -eq 0 ] || exit 1
         ;;

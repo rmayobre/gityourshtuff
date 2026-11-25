@@ -11,8 +11,18 @@
 # Environment you can set:
 #   DOTFILES_PLUGIN_CONFIG  Config folder (default: <repo root>/.config/dotfiles).
 
-# Hooks the dot-* commands know how to run. Reserved hooks in the template are not listed here.
-PLUGIN_HOOKS="init update"
+# Hooks the dot-* commands run (check and uninstall are reserved in the template, not run yet).
+# dot-plugin run only offers the first two: backup and restore need a snapshot to work on.
+PLUGIN_HOOKS="init update backup restore"
+PLUGIN_RUN_HOOKS="init update"
+
+# Where plugin data lives inside a dot-backup snapshot: .plugin-data/NAME/. The file restore
+# skips this folder; restore hooks read from it.
+PLUGIN_DATA_DIR=".plugin-data"
+
+# The .plugin-data folder of the snapshot being written (backup) or read (restore). Set by
+# backup_plugins and by dot-restore; the backup and restore hooks get their folder from it.
+PLUGIN_BACKUP_ROOT=""
 
 # Results of the last run_plugins call.
 PLUGINS_OK=0
@@ -85,7 +95,12 @@ plugin_hook_script() {
 # the plugin's folder, with stdin closed so it can never wait for input.
 _plugin_exec() {
     local name="$1" hook="$2" script="$3" dir
+    local -a extra=()
     dir="$(plugins_dir)/$name"
+    case "$hook" in
+        backup)  extra=(DOT_BACKUP_DEST="$PLUGIN_BACKUP_ROOT/$name") ;;
+        restore) extra=(DOT_BACKUP_SRC="$PLUGIN_BACKUP_ROOT/$name") ;;
+    esac
     (
         cd "$dir" || exit 1
         exec env \
@@ -95,7 +110,7 @@ _plugin_exec() {
             DOT_OS="$(dot_os)" \
             DOT_ROOT="$(repo_root)" \
             DOT_COMMON="$_dot_dir/common.sh" \
-            "$script" </dev/null
+            ${extra[@]+"${extra[@]}"} "$script" </dev/null
     )
 }
 
@@ -120,8 +135,29 @@ plugin_is_installed() {
     _plugin_exec "$1" installed "$script" >/dev/null 2>&1
 }
 
+# _plugin_scan_backup NAME: after a backup hook, look through what it stored for secrets (the
+# same checks dot-doctor uses). If there are any, delete the plugin's data and fail, leaving the
+# offending paths in PLUGIN_SCAN_HITS. A backup must never quietly keep a credential.
+PLUGIN_SCAN_HITS=""
+_plugin_scan_backup() {
+    local dir="$PLUGIN_BACKUP_ROOT/$1" f rel
+    PLUGIN_SCAN_HITS=""
+    [ -d "$dir" ] || return 0
+    while IFS= read -r -d '' f; do
+        rel="${f#"$dir"/}"
+        if is_sensitive "$rel"; then PLUGIN_SCAN_HITS="$PLUGIN_SCAN_HITS $rel"; fi
+    done < <(find "$dir" -type f -print0)
+    while IFS= read -r f; do
+        [ -n "$f" ] && PLUGIN_SCAN_HITS="$PLUGIN_SCAN_HITS ${f#"$dir"/}"
+    done < <(grep -rIlE -e "$SECRET_PATTERN" "$dir" 2>/dev/null || true)
+    [ -z "$PLUGIN_SCAN_HITS" ] && return 0
+    rm -rf "${dir:?}"
+    return 1
+}
+
 _plugin_ok()      { PLUGINS_OK=$((PLUGINS_OK + 1)); }
 _plugin_skipped() { PLUGINS_SKIPPED=$((PLUGINS_SKIPPED + 1)); info "$1: $2"; }
+_plugin_skipped_quietly() { PLUGINS_SKIPPED=$((PLUGINS_SKIPPED + 1)); }
 _plugin_failed()  {
     PLUGINS_FAILED=$((PLUGINS_FAILED + 1))
     PLUGINS_FAILED_LIST="$PLUGINS_FAILED_LIST $1"
@@ -147,15 +183,18 @@ _run_one_plugin() {
 
     script="$(plugin_hook_script "$name" "$hook")" || {
         if [ "$hook" = init ]; then _plugin_failed "$name" "has no 'init' script"
-        else _plugin_skipped "$name" "no $hook script"; fi
+        else _plugin_skipped_quietly; fi   # most plugins have no update, backup or restore
         return 0; }
     if [ ! -x "$script" ]; then _plugin_failed "$name" "$hook is not executable (chmod +x $script)"; return 0; fi
 
+    [ "$hook" != backup ] || mkdir -p "$PLUGIN_BACKUP_ROOT/$name"
     if ! _plugin_prepare "$name"; then _plugin_failed "$name" "could not get administrator rights"; return 0; fi
 
     if run_monitored "$name: $hook" _plugin_exec "$name" "$hook" "$script"; then
         if [ "$hook" = init ] && ! plugin_is_installed "$name"; then
             _plugin_failed "$name" "init succeeded but 'installed' still reports it missing"
+        elif [ "$hook" = backup ] && ! _plugin_scan_backup "$name"; then
+            _plugin_failed "$name" "backup looked like it held secrets (${PLUGIN_SCAN_HITS# }); its data was not kept"
         else
             _plugin_ok
         fi
@@ -165,10 +204,12 @@ _run_one_plugin() {
     return 0
 }
 
-# run_plugins HOOK [NAME...]: run HOOK (init or update) for the named plugins, or for every
-# enabled plugin when none are named. Always returns 0; read PLUGINS_FAILED afterwards.
-#   init    installs plugins whose `installed` hook fails.
-#   update  updates plugins whose `installed` hook succeeds.
+# run_plugins HOOK [NAME...]: run HOOK for the named plugins, or for every enabled plugin when
+# none are named. Always returns 0; read PLUGINS_FAILED afterwards.
+#   init     installs plugins whose `installed` hook fails.
+#   update   updates plugins whose `installed` hook succeeds.
+#   backup   asks installed plugins to store data in $PLUGIN_BACKUP_ROOT/NAME (see backup_plugins).
+#   restore  asks installed plugins to read $PLUGIN_BACKUP_ROOT/NAME back.
 run_plugins() {
     local hook="$1" name
     local -a names=()
@@ -185,9 +226,35 @@ run_plugins() {
 
     for name in "${names[@]}"; do _run_one_plugin "$hook" "$name"; done
 
-    info "Plugins ($hook): $PLUGINS_OK ok, $PLUGINS_SKIPPED skipped, $PLUGINS_FAILED failed"
+    # Quiet when nothing ran: most plugins have no backup or restore hook.
+    if [ "$hook" = init ] || [ $((PLUGINS_OK + PLUGINS_FAILED)) -gt 0 ]; then
+        info "Plugins ($hook): $PLUGINS_OK ok, $PLUGINS_SKIPPED skipped, $PLUGINS_FAILED failed"
+    fi
     if [ "$PLUGINS_FAILED" -gt 0 ]; then
-        warn "Failed plugins:$PLUGINS_FAILED_LIST (retry with: dot-plugin run $hook NAME)"
+        case "$hook" in
+            backup)  warn "Failed plugins:$PLUGINS_FAILED_LIST (run dot-backup again after fixing them)" ;;
+            restore) warn "Failed plugins:$PLUGINS_FAILED_LIST (run dot-restore again after fixing them)" ;;
+            *)       warn "Failed plugins:$PLUGINS_FAILED_LIST (retry with: dot-plugin run $hook NAME)" ;;
+        esac
+    fi
+    return 0
+}
+
+# backup_plugins DEST: run the backup hook of every enabled, installed plugin, storing what they
+# return in DEST/.plugin-data/NAME/ (DEST is a snapshot made by snapshot_dotfiles). Plugins that
+# stored nothing leave no folder, and the manifest gets a "plugins:" line naming the others.
+backup_plugins() {
+    local dest="$1" d names=""
+    PLUGIN_BACKUP_ROOT="$dest/$PLUGIN_DATA_DIR"
+    mkdir -p "$PLUGIN_BACKUP_ROOT"
+    run_plugins backup
+    for d in "$PLUGIN_BACKUP_ROOT"/*/; do
+        [ -d "$d" ] || continue
+        rmdir "$d" 2>/dev/null || names="$names $(basename "$d")"
+    done
+    rmdir "$PLUGIN_BACKUP_ROOT" 2>/dev/null || true
+    if [ -n "$names" ] && [ -f "$dest/MANIFEST.txt" ]; then
+        printf 'plugins:    %s\n' "${names# }" >>"$dest/MANIFEST.txt"
     fi
     return 0
 }

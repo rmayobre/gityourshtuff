@@ -99,9 +99,10 @@ snapshot_dotfiles() {
 }
 
 # restore_snapshot SRC ROOT: copy every file from the backup folder SRC into ROOT (keeping
-# paths and permissions), except SRC/MANIFEST.txt. Same tar pipe as snapshot_dotfiles.
+# paths and permissions), except SRC/MANIFEST.txt and the plugin data in SRC/.plugin-data,
+# which plugins restore themselves. Same tar pipe as snapshot_dotfiles.
 restore_snapshot() {
-    tar -C "$1" --exclude ./MANIFEST.txt -cf - . | tar -C "$2" -xf -
+    tar -C "$1" --exclude ./MANIFEST.txt --exclude "./$PLUGIN_DATA_DIR" -cf - . | tar -C "$2" -xf -
 }
 
 # is_sensitive PATH: succeeds if a root-relative PATH looks like a secret (keys, credentials,
