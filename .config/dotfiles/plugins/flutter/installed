@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Installed when the Flutter SDK checkout exists with a working launcher.
+# FLUTTER_HOME can be set in the environment to use another location (see init).
+[ -x "${FLUTTER_HOME:-$HOME/.local/share/flutter}/bin/flutter" ]

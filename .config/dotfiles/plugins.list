@@ -7,5 +7,7 @@
 #
 # Create a plugin with: dot-plugin new NAME
 #
-# Example:
-# flutter
+# Examples that ship with the template (uncomment to enable; read them first):
+# flutter          Flutter SDK (with Dart) in ~/.local/share/flutter
+# docker           Docker Engine (Linux) or Docker Desktop via Homebrew (macOS); needs sudo
+# nvidia-drivers   NVIDIA proprietary driver on Ubuntu, Debian or Arch; needs sudo; reboot after

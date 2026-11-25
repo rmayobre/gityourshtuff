@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Install the Flutter SDK (which bundles Dart) from the official git repository into
+# ~/.local/share/flutter, the way Flutter's own install docs describe. That folder is ignored
+# by the whitelist, so the SDK never ends up in your dotfiles repo. env.sh puts it on PATH in
+# new shells.
+#
+# FLUTTER_HOME     Where to install (default: ~/.local/share/flutter). Also set it for `installed`.
+# FLUTTER_VERSION  A tag such as 3.35.0, or "stable" (default). Pin a tag so every machine matches.
+#
+# Needs git, curl, unzip and xz, which Flutter's own tool also requires. Platform libraries for
+# desktop or Android builds are not installed here; run `flutter doctor` afterwards to see what
+# your targets still need.
+set -euo pipefail
+
+home="${FLUTTER_HOME:-$HOME/.local/share/flutter}"
+version="${FLUTTER_VERSION:-stable}"
+
+missing=""
+for tool in git curl unzip xz; do
+    command -v "$tool" >/dev/null 2>&1 || missing="$missing $tool"
+done
+if [ -n "$missing" ]; then
+    echo "missing required tools:$missing (install them with your package manager, then run again)" >&2
+    exit 1
+fi
+
+# A failed earlier run can leave a partial checkout without a launcher; start over from clean.
+if [ -e "$home" ] && [ ! -x "$home/bin/flutter" ]; then
+    rm -rf "${home:?}"
+fi
+mkdir -p "$(dirname "$home")"
+git clone --depth 1 --branch "$version" https://github.com/flutter/flutter.git "$home"
+
+# The first run downloads the matching Dart SDK and the tool's own snapshot.
+"$home/bin/flutter" --version
+"$home/bin/flutter" config --no-analytics >/dev/null

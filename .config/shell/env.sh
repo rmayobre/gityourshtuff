@@ -17,3 +17,10 @@ case ":$PATH:" in
     *":$HOME/.local/bin:"*) ;;
     *) export PATH="$HOME/.local/bin:$PATH" ;;
 esac
+
+# Plugins can ship an env.sh (a PATH entry, say); see ~/.config/dotfiles/plugins/_template/env.sh.
+# Looping over the folders (not env.sh files) keeps zsh from erroring on an unmatched glob.
+for _plugin in "$HOME"/.config/dotfiles/plugins/*; do
+    [ -r "$_plugin/env.sh" ] && . "$_plugin/env.sh"
+done
+unset _plugin

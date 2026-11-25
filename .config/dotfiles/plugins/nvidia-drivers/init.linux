@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Install the proprietary NVIDIA driver with your distribution's own tooling:
+#   Ubuntu and derivatives  ubuntu-drivers install   (picks the recommended driver)
+#   Debian                  the nvidia-driver package (needs the "non-free" component enabled)
+#   Arch and derivatives    nvidia-dkms              (also needs your kernel's headers)
+# Other distributions fail with a message: Fedora, for example, needs RPM Fusion enabled first
+# (then install akmod-nvidia). Secure Boot may require enrolling a key; follow the distribution's
+# prompts or docs.
+#
+# REBOOT after the first install: the new driver is only loaded at boot, so `nvidia-smi` won't
+# work until then. This plugin counts as installed once the package is present. There is no
+# `update` hook: drivers update with your distribution's normal package updates.
+#
+# Needs root, so this plugin has a `needs-sudo` file: the password is asked for before this runs.
+# Changing graphics drivers can leave a machine without a working display; try it on a machine
+# you can fix from a console.
+set -euo pipefail
+
+sudo -n true 2>/dev/null || { echo "needs sudo; run: sudo -v, then try again" >&2; exit 1; }
+lspci 2>/dev/null | grep -qi nvidia || { echo "no NVIDIA GPU found" >&2; exit 1; }
+
+id=""; like=""
+if [ -r /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    id="$(. /etc/os-release && echo "${ID:-}")"
+    like="$(. /etc/os-release && echo "${ID_LIKE:-}")"
+fi
+
+case " $id $like " in
+    *" ubuntu "*)
+        sudo -n apt-get update
+        sudo -n apt-get install -y ubuntu-drivers-common
+        sudo -n ubuntu-drivers install ;;
+    *" debian "*)
+        sudo -n apt-get update
+        sudo -n apt-get install -y nvidia-driver ;;
+    *" arch "*)
+        sudo -n pacman -S --needed --noconfirm nvidia-dkms nvidia-utils ;;
+    *)
+        echo "unsupported distribution '${id:-unknown}'; install the NVIDIA driver by hand" >&2
+        exit 1 ;;
+esac

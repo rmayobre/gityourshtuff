@@ -76,10 +76,14 @@ dot-plugin new flutter     # copy the template, then write installed and init
 dot-plugin run init        # or let dot-init do it
 ```
 
-- `dot-init` installs enabled plugins that aren't installed yet; `dot-update` runs `update` for
-  the ones that are. Both accept `--no-plugins` and `--strict`.
+- `dot-init` lists the enabled plugins that aren't installed yet and asks before installing them
+  (`--yes` skips the question, `--no-plugins` skips plugins; without a terminal it installs only
+  with `--yes`). `dot-update` runs `update` for the installed ones. Both accept `--strict`.
 - Hooks run as separate processes. A failing plugin is reported and never stops the command
-  (`--strict` turns it into exit status 1).
+  (`--strict` turns it into exit status 1). There is no time limit.
+- A plugin that needs root has an empty `needs-sudo` file; the password is asked for before its
+  hook starts. A plugin may ship an `env.sh` (a `PATH` entry, say) that login shells source.
+- Examples ship disabled in `plugins.list`: `flutter`, `docker` and `nvidia-drivers`.
 - `plugins.list` is shared by all your machines. A git-ignored `plugins.local` next to it adds
   (`name`) or removes (`-name`) plugins on one machine.
 

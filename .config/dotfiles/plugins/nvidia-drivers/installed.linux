@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Installed when a driver package is present, or when there is no NVIDIA GPU at all (so a
+# shared plugins.list can name this plugin and machines without the hardware skip it).
+# It checks the package, not `nvidia-smi`, because a new driver only loads after a reboot.
+if ! { command -v lspci >/dev/null 2>&1 && lspci 2>/dev/null | grep -qi nvidia; }; then
+    exit 0
+fi
+if command -v dpkg-query >/dev/null 2>&1; then
+    dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 2>/dev/null | grep -Eq '^ii +nvidia-(driver|open)'
+elif command -v pacman >/dev/null 2>&1; then
+    pacman -Qq nvidia-dkms nvidia-open-dkms nvidia nvidia-open >/dev/null 2>&1
+elif command -v rpm >/dev/null 2>&1; then
+    rpm -q akmod-nvidia >/dev/null 2>&1
+else
+    exit 1
+fi

@@ -14,8 +14,11 @@
 #   Be non-interactive: standard input is closed, so a prompt gets end-of-file.
 #   Output is captured and only shown on failure, behind a progress spinner, so print
 #   whatever helps you debug a failure.
-#   Hooks are stopped after DOT_PLUGIN_TIMEOUT seconds (default 600; 0 disables, and it needs
-#   `timeout` or `gtimeout`).
+#   There is no time limit, so a long install is fine.
+#   Needs root (system packages)? Add an empty file named `needs-sudo` to the plugin folder.
+#   The runner then asks for the sudo password once, in the terminal, before the hook starts;
+#   inside the hook run privileged commands with `sudo -n`, which fails at once instead of
+#   waiting for a password nobody can see. (A password prompt in a hook would hang.)
 #
 # Environment
 #   DOT_PLUGIN      this plugin's name

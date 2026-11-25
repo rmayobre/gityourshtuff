@@ -7,8 +7,9 @@
 # Contract
 #   Exit 0      success (including "already up to date").
 #   Exit != 0   failure: reported, and dot-update carries on and still finishes its own work.
-#   Same rules as `init`: non-interactive (stdin closed), output shown only on failure,
-#   stopped after DOT_PLUGIN_TIMEOUT seconds.
+#   Same rules as `init`: non-interactive (stdin closed), output shown only on failure, no
+#   time limit, and a `needs-sudo` file in the plugin folder gets the sudo password asked for
+#   before this hook starts.
 #
 # Environment
 #   DOT_PLUGIN, DOT_PLUGIN_DIR, DOT_OS, DOT_ROOT, DOT_COMMON: as in `init`.

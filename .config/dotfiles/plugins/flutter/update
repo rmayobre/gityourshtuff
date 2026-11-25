@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Upgrade Flutter. If FLUTTER_VERSION pins a tag, the SDK is moved to that tag; on "stable"
+# (the default) `flutter upgrade` moves to the newest stable release.
+set -euo pipefail
+
+home="${FLUTTER_HOME:-$HOME/.local/share/flutter}"
+version="${FLUTTER_VERSION:-stable}"
+
+if [ "$version" = stable ]; then
+    "$home/bin/flutter" upgrade
+else
+    git -C "$home" fetch --depth 1 origin tag "$version"
+    git -C "$home" checkout --quiet "$version"
+    "$home/bin/flutter" --version
+fi

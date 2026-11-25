@@ -3,14 +3,13 @@
 #
 # A plugin is a folder in ~/.config/dotfiles/plugins/NAME/ holding one executable per hook
 # (installed, init, update, ...). See ~/.config/dotfiles/plugins/_template/ for the contract.
-# Every hook runs as its own process, so a plugin that crashes, exits non-zero, hangs (see
-# DOT_PLUGIN_TIMEOUT) or has a syntax error cannot take the calling command down. Failures are
-# counted and reported; the caller decides what they mean for its own exit status.
+# Every hook runs as its own process, so a plugin that crashes, exits non-zero or has a syntax
+# error cannot take the calling command down. Failures are
+# counted and reported; the caller decides what they mean for its own exit status. There is no
+# time limit: plugins install and update packages, which can legitimately take a while.
 #
 # Environment you can set:
 #   DOTFILES_PLUGIN_CONFIG  Config folder (default: <repo root>/.config/dotfiles).
-#   DOT_PLUGIN_TIMEOUT      Seconds before a hook is stopped; 0 disables (default: 600). Needs
-#                           `timeout` or `gtimeout` (coreutils on macOS); without either, no limit.
 
 # Hooks the dot-* commands know how to run. Reserved hooks in the template are not listed here.
 PLUGIN_HOOKS="init update"
@@ -85,13 +84,8 @@ plugin_hook_script() {
 # _plugin_exec NAME HOOK SCRIPT: run SCRIPT in its own process with the DOT_* environment, in
 # the plugin's folder, with stdin closed so it can never wait for input.
 _plugin_exec() {
-    local name="$1" hook="$2" script="$3" limit="${DOT_PLUGIN_TIMEOUT:-600}" dir
-    local -a guard=()
+    local name="$1" hook="$2" script="$3" dir
     dir="$(plugins_dir)/$name"
-    if [ "$limit" -gt 0 ] 2>/dev/null; then
-        if command -v timeout >/dev/null 2>&1; then guard=(timeout "$limit")
-        elif command -v gtimeout >/dev/null 2>&1; then guard=(gtimeout "$limit"); fi
-    fi
     (
         cd "$dir" || exit 1
         exec env \
@@ -101,8 +95,21 @@ _plugin_exec() {
             DOT_OS="$(dot_os)" \
             DOT_ROOT="$(repo_root)" \
             DOT_COMMON="$_dot_dir/common.sh" \
-            ${guard[@]+"${guard[@]}"} "$script" </dev/null
+            "$script" </dev/null
     )
+}
+
+# _plugin_prepare NAME: a plugin with a `needs-sudo` file in its folder installs system
+# packages. Hooks run behind a spinner with no input, where a password prompt would hang
+# unseen, so ask for the password here, once, before the hook starts. The hook then uses
+# `sudo -n`. Returns non-zero if sudo can't be used.
+_plugin_prepare() {
+    [ -e "$(plugins_dir)/$1/needs-sudo" ] || return 0
+    [ "$(id -u)" -ne 0 ] || return 0
+    command -v sudo >/dev/null 2>&1 || { warn "$1 needs root but sudo isn't installed; run dot-init as root"; return 1; }
+    sudo -n true 2>/dev/null && return 0
+    info "$1 needs administrator rights"
+    sudo -v || { warn "$1: sudo authentication failed"; return 1; }
 }
 
 # plugin_is_installed NAME: run the plugin's `installed` hook silently. Succeeds if installed.
@@ -143,6 +150,8 @@ _run_one_plugin() {
         else _plugin_skipped "$name" "no $hook script"; fi
         return 0; }
     if [ ! -x "$script" ]; then _plugin_failed "$name" "$hook is not executable (chmod +x $script)"; return 0; fi
+
+    if ! _plugin_prepare "$name"; then _plugin_failed "$name" "could not get administrator rights"; return 0; fi
 
     if run_monitored "$name: $hook" _plugin_exec "$name" "$hook" "$script"; then
         if [ "$hook" = init ] && ! plugin_is_installed "$name"; then
