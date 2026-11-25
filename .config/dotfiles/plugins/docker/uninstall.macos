@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Remove Docker Desktop (the Homebrew cask). Quit the app first. Images and volumes live in the
+# app's own data folder (~/Library/Containers/com.docker.docker) and are left for you to delete.
+set -euo pipefail
+
+command -v brew >/dev/null 2>&1 || { echo "Homebrew is required (https://brew.sh)" >&2; exit 1; }
+brew uninstall --cask docker

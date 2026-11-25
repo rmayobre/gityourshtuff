@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Remove Docker Engine's packages (apt or dnf). Images, containers and volumes in /var/lib/docker
+# and /var/lib/containerd are KEPT on purpose, so reinstalling brings them back; delete them by
+# hand if you want them gone. Your user stays in the docker group.
+#
+# Needs root, so this plugin has a `needs-sudo` file: the password is asked for before this runs.
+set -euo pipefail
+
+sudo -n true 2>/dev/null || { echo "needs sudo; run: sudo -v, then try again" >&2; exit 1; }
+pkgs="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin docker-ce-rootless-extras"
+
+if command -v systemctl >/dev/null 2>&1; then
+    sudo -n systemctl disable --now docker docker.socket 2>/dev/null || true
+fi
+if command -v apt-get >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    sudo -n apt-get purge -y $pkgs
+    sudo -n apt-get autoremove -y
+elif command -v dnf >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    sudo -n dnf remove -y $pkgs
+else
+    echo "unsupported package manager; remove Docker by hand" >&2
+    exit 1
+fi

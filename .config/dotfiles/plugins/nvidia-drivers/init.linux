@@ -9,7 +9,9 @@
 #
 # REBOOT after the first install: the new driver is only loaded at boot, so `nvidia-smi` won't
 # work until then. This plugin counts as installed once the package is present. There is no
-# `update` hook: drivers update with your distribution's normal package updates.
+# `update` hook: drivers update with your distribution's normal package updates. There is no
+# `uninstall` hook on purpose: removing a graphics driver can leave a machine without a display,
+# so do that by hand, from a console. `dot-doctor` reports "driver isn't loaded" until you reboot.
 #
 # Needs root, so this plugin has a `needs-sudo` file: the password is asked for before this runs.
 # Changing graphics drivers can leave a machine without a working display; try it on a machine

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Healthy when the driver is loaded and talking to the GPU. Right after the first install it
+# isn't, because the driver is only loaded at boot: this is where "reboot" shows up. Machines
+# without an NVIDIA GPU have nothing to check.
+if ! { command -v lspci >/dev/null 2>&1 && lspci 2>/dev/null | grep -qi nvidia; }; then
+    echo "no NVIDIA GPU in this machine"
+    exit 0
+fi
+if ! command -v nvidia-smi >/dev/null 2>&1; then
+    echo "the NVIDIA driver is installed but nvidia-smi is missing; reinstall it (dot-plugin run init nvidia-drivers)"
+    exit 1
+fi
+if out="$(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>&1)"; then
+    echo "$out" | head -n 1
+    exit 0
+fi
+echo "the NVIDIA driver isn't loaded; reboot if you just installed or updated it"
+echo "$out" | head -n 2
+exit 1

@@ -4,16 +4,17 @@
 # A plugin is a folder in ~/.config/dotfiles/plugins/NAME/ holding one executable per hook
 # (installed, init, update, ...). See ~/.config/dotfiles/plugins/_template/ for the contract.
 # Every hook runs as its own process, so a plugin that crashes, exits non-zero or has a syntax
-# error cannot take the calling command down. Failures are
-# counted and reported; the caller decides what they mean for its own exit status. There is no
-# time limit: plugins install and update packages, which can legitimately take a while.
+# error cannot take the calling command down. Failures are counted and reported; the caller
+# decides what they mean for its own exit status. There is no time limit: plugins install and
+# update packages, which can legitimately take a while.
 #
 # Environment you can set:
 #   DOTFILES_PLUGIN_CONFIG  Config folder (default: <repo root>/.config/dotfiles).
 
-# Hooks the dot-* commands run (check and uninstall are reserved in the template, not run yet).
-# dot-plugin run only offers the first two: backup and restore need a snapshot to work on.
-PLUGIN_HOOKS="init update backup restore"
+# Hooks run_plugins can run. `check` is not one of them: dot-doctor calls plugin_check, which
+# shows the hook's output either way. dot-plugin run only offers the first two: backup and
+# restore need a snapshot to work on, and uninstall belongs to dot-uninstall.
+PLUGIN_HOOKS="init update backup restore uninstall"
 PLUGIN_RUN_HOOKS="init update"
 
 # Where plugin data lives inside a dot-backup snapshot: .plugin-data/NAME/. The file restore
@@ -155,6 +156,34 @@ _plugin_scan_backup() {
     return 1
 }
 
+# plugin_check NAME: ask one plugin how healthy it is, for dot-doctor. Sets PLUGIN_CHECK_STATE:
+#   invalid    the plugin folder or its `installed` hook is unusable (output says why)
+#   missing    enabled but not installed
+#   healthy    installed, and its `check` hook (if any) exited 0
+#   unhealthy  its `check` hook exited non-zero
+# and PLUGIN_CHECK_OUTPUT to what the hook printed. Unlike other hooks, the output is kept on
+# success too, because it is the report. Always returns 0.
+PLUGIN_CHECK_STATE=""
+PLUGIN_CHECK_OUTPUT=""
+plugin_check() {
+    local name="$1" script
+    PLUGIN_CHECK_STATE=invalid; PLUGIN_CHECK_OUTPUT=""
+    if ! valid_plugin_name "$name"; then PLUGIN_CHECK_OUTPUT="not a valid plugin name"; return 0; fi
+    if [ ! -d "$(plugins_dir)/$name" ]; then PLUGIN_CHECK_OUTPUT="enabled but there is no folder for it in $(plugins_dir)"; return 0; fi
+    script="$(plugin_hook_script "$name" installed)" || { PLUGIN_CHECK_OUTPUT="has no 'installed' script"; return 0; }
+    if [ ! -x "$script" ]; then PLUGIN_CHECK_OUTPUT="installed is not executable (chmod +x $script)"; return 0; fi
+    if ! plugin_is_installed "$name"; then PLUGIN_CHECK_STATE=missing; return 0; fi
+    PLUGIN_CHECK_STATE=healthy
+    script="$(plugin_hook_script "$name" check)" || return 0
+    if [ ! -x "$script" ]; then PLUGIN_CHECK_STATE=invalid; PLUGIN_CHECK_OUTPUT="check is not executable (chmod +x $script)"; return 0; fi
+    if PLUGIN_CHECK_OUTPUT="$(_plugin_exec "$name" check "$script" 2>&1)"; then
+        PLUGIN_CHECK_STATE=healthy
+    else
+        PLUGIN_CHECK_STATE=unhealthy
+    fi
+    return 0
+}
+
 _plugin_ok()      { PLUGINS_OK=$((PLUGINS_OK + 1)); }
 _plugin_skipped() { PLUGINS_SKIPPED=$((PLUGINS_SKIPPED + 1)); info "$1: $2"; }
 _plugin_skipped_quietly() { PLUGINS_SKIPPED=$((PLUGINS_SKIPPED + 1)); }
@@ -193,6 +222,8 @@ _run_one_plugin() {
     if run_monitored "$name: $hook" _plugin_exec "$name" "$hook" "$script"; then
         if [ "$hook" = init ] && ! plugin_is_installed "$name"; then
             _plugin_failed "$name" "init succeeded but 'installed' still reports it missing"
+        elif [ "$hook" = uninstall ] && plugin_is_installed "$name"; then
+            _plugin_failed "$name" "uninstall succeeded but 'installed' still reports it installed"
         elif [ "$hook" = backup ] && ! _plugin_scan_backup "$name"; then
             _plugin_failed "$name" "backup looked like it held secrets (${PLUGIN_SCAN_HITS# }); its data was not kept"
         else
@@ -210,6 +241,7 @@ _run_one_plugin() {
 #   update   updates plugins whose `installed` hook succeeds.
 #   backup   asks installed plugins to store data in $PLUGIN_BACKUP_ROOT/NAME (see backup_plugins).
 #   restore  asks installed plugins to read $PLUGIN_BACKUP_ROOT/NAME back.
+#   uninstall  removes installed plugins' software (dot-uninstall --remove-plugins).
 run_plugins() {
     local hook="$1" name
     local -a names=()
@@ -234,6 +266,7 @@ run_plugins() {
         case "$hook" in
             backup)  warn "Failed plugins:$PLUGINS_FAILED_LIST (run dot-backup again after fixing them)" ;;
             restore) warn "Failed plugins:$PLUGINS_FAILED_LIST (run dot-restore again after fixing them)" ;;
+            uninstall) warn "Failed plugins:$PLUGINS_FAILED_LIST (their software is still installed; remove it by hand)" ;;
             *)       warn "Failed plugins:$PLUGINS_FAILED_LIST (retry with: dot-plugin run $hook NAME)" ;;
         esac
     fi

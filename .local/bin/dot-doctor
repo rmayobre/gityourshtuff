@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 # Check that your dotfiles setup is healthy and report anything that needs attention.
 #
-# Usage: dot-doctor
+# Usage: dot-doctor [--no-plugins]
+#
+#   --no-plugins  Don't ask plugins for their health check.
 #
 # Checks git, the worktree and bare repo, your remote, the whitelist .gitignore, the shtuff
 # submodule, PATH, placeholder values, allowed-but-untracked files, uncommitted changes, and
-# secrets in tracked files. Each check prints as [info] (fine), [warn] (worth fixing) or
+# secrets in tracked files, and each enabled plugin (is it installed, and does its `check` hook
+# say it is healthy). Each check prints as [info] (fine), [warn] (worth fixing) or
 # [error] (broken); exits 1 if any check is broken (warnings alone don't fail).
 set -uo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
 
+PLUGINS=true
 case "${1:-}" in
     "") ;;
-    -h|--help) sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --no-plugins) PLUGINS=false ;;
+    -h|--help) sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) error "unknown option: $1 (try --help)"; exit 1 ;;
 esac
 
@@ -128,6 +133,28 @@ if [ -n "$leaks$hits" ]; then
     printf '        remove them with: git rm --cached <file>, and rotate the secret if it was pushed\n'
 else
     ok "no secrets found in tracked files"
+fi
+
+# --- plugins -----------------------------------------------------------------------------
+# A plugin problem is a warning, never a failure: it doesn't make the setup itself broken.
+if $PLUGINS; then
+    plugins_seen=false
+    while IFS= read -r plugin; do
+        plugins_seen=true
+        plugin_check "$plugin"
+        first="${PLUGIN_CHECK_OUTPUT%%$'\n'*}"
+        rest=""; case "$PLUGIN_CHECK_OUTPUT" in *$'\n'*) rest="${PLUGIN_CHECK_OUTPUT#*$'\n'}" ;; esac
+        case "$PLUGIN_CHECK_STATE" in
+            healthy)   ok "plugin $plugin: ${first:-installed}" ;;
+            unhealthy) bad "plugin $plugin is unhealthy: ${first:-its check failed}" ;;
+            missing)   bad "plugin $plugin is enabled but not installed; run: dot-plugin run init $plugin" ;;
+            *)         bad "plugin $plugin: $first" ;;
+        esac
+        if [ -n "$rest" ]; then
+            while IFS= read -r line; do printf '        %s\n' "$line"; done <<<"$rest"
+        fi
+    done < <(enabled_plugins)
+    $plugins_seen || ok "no plugins enabled"
 fi
 
 # --- backups -----------------------------------------------------------------------------

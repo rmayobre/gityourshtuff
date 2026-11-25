@@ -86,6 +86,10 @@ dot-plugin run init        # or let dot-init do it
 - `dot-backup` also asks installed plugins that have a `backup` hook for their data (stored under
   `.plugin-data/NAME/` in the snapshot, and scanned for secrets); `dot-restore` hands it back to
   each installed plugin's `restore` hook. Both accept `--no-plugins` and `--strict`.
+- `dot-doctor` runs each installed plugin's `check` hook and shows its report (a plugin problem is
+  a warning, not a failure; `--no-plugins` skips it). `dot-uninstall --remove-plugins` runs
+  their `uninstall` hooks to remove the software they installed; without that flag the software
+  is left alone.
 - Examples ship disabled in `plugins.list`: `flutter`, `docker` and `nvidia-drivers`.
 - `plugins.list` is shared by all your machines. A git-ignored `plugins.local` next to it adds
   (`name`) or removes (`-name`) plugins on one machine.

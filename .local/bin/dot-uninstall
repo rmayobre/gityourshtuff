@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Stop managing your home directory with this repo (the reverse of the installer).
 #
-# Usage: dot-uninstall [--remove-files] [--restore BACKUP] [--keep-repo] [--yes]
+# Usage: dot-uninstall [--remove-files] [--restore BACKUP] [--keep-repo] [--remove-plugins]
+#                      [--strict] [--yes]
 #
 #   (no options)     Remove the git plumbing (~/.git, ~/.gitignore, ~/.gitmodules and the bare
 #                    repo ~/.dotfiles.git). Your dotfiles stay in place as plain files.
@@ -11,6 +12,10 @@
 #                    ~/.dotfiles-backup, or a path), such as the originals the installer saved.
 #   --keep-repo      Keep the bare repo ~/.dotfiles.git so your history survives (a later
 #                    install can reuse it).
+#   --remove-plugins Also run the `uninstall` hook of each installed plugin, which removes the
+#                    software it installed (SDKs, Docker, ...). Without this flag plugins' software
+#                    is left alone. Plugin data is added to the pre-uninstall backup first.
+#   --strict         Exit 1 if a plugin's uninstall failed (otherwise it is only reported).
 #   --yes            Don't ask for confirmation.
 #
 # A "pre-uninstall" backup of your current files is always saved to ~/.dotfiles-backup first.
@@ -20,17 +25,21 @@ source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
 
 REMOVE_FILES=false
 KEEP_REPO=false
+REMOVE_PLUGINS=false
+STRICT=false
 YES=false
 RESTORE=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --remove-files) REMOVE_FILES=true ;;
         --keep-repo) KEEP_REPO=true ;;
+        --remove-plugins) REMOVE_PLUGINS=true ;;
+        --strict) STRICT=true ;;
         --yes|-y) YES=true ;;
         --restore)
             [ $# -ge 2 ] || { error "--restore needs a backup name or path"; exit 1; }
             RESTORE="$2"; shift ;;
-        -h|--help) sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) error "unknown option: $1 (try --help)"; exit 1 ;;
     esac
     shift
@@ -61,6 +70,14 @@ if [ -n "$RESTORE" ]; then
     SRC="$(cd "$SRC" && pwd -P)"
 fi
 
+# Installed plugins that know how to remove themselves, last enabled first (so a plugin that
+# builds on an earlier one is removed before it).
+removable=()
+while IFS= read -r plugin; do
+    plugin_is_installed "$plugin" && plugin_hook_script "$plugin" uninstall >/dev/null \
+        && removable=("$plugin" ${removable[@]+"${removable[@]}"})
+done < <(enabled_plugins)
+
 branch="$(git symbolic-ref --short -q HEAD || true)"
 ntracked="$(git ls-files | wc -l | tr -d ' ')"
 
@@ -71,6 +88,9 @@ if $REMOVE_FILES; then
     echo "  - delete the $ntracked tracked files and the shtuff submodule under $ROOT"
 else
     echo "  - leave your dotfiles in place, and remove only $ROOT/.git, .gitignore and .gitmodules"
+fi
+if $REMOVE_PLUGINS && [ "${#removable[@]}" -gt 0 ]; then
+    echo "  - run the uninstall hook of ${removable[*]}, which REMOVES the software they installed"
 fi
 [ -z "$SRC" ] || echo "  - restore the files from $SRC"
 if $KEEP_REPO; then echo "  - keep the bare repo $COMMON"; else echo "  - delete the bare repo $COMMON (your local history)"; fi
@@ -88,6 +108,10 @@ if ! $KEEP_REPO && [ -n "$branch" ]; then
     fi
 fi
 
+if ! $REMOVE_PLUGINS && [ "${#removable[@]}" -gt 0 ]; then
+    info "Software installed by plugins (${removable[*]}) is left in place; add --remove-plugins to remove it."
+fi
+
 if ! $YES; then
     confirm "Continue?" || { info "Cancelled"; exit 0; }
 fi
@@ -96,6 +120,13 @@ fi
 safety="$(backup_root)/$(date +%Y%m%d-%H%M%S)-pre-uninstall"
 run_monitored "Saving current files" snapshot_dotfiles "$safety" || exit 1
 info "Current files saved to $safety"
+
+# Plugins go first: their hooks are among the files removed below. Save their data before the
+# software it belongs to is gone.
+if $REMOVE_PLUGINS && [ "${#removable[@]}" -gt 0 ]; then
+    backup_plugins "$safety"
+    run_plugins uninstall "${removable[@]}"
+fi
 
 list="$(mktemp)"
 trap 'rm -f "$list"' EXIT
@@ -140,4 +171,5 @@ if [ -z "$SRC" ]; then
     info "Originals the installer set aside are in $(backup_root); copy back what you want, e.g.:"
     info "  cp -R $(backup_root)/<folder>/. $ROOT/"
 fi
+if $STRICT && [ "$PLUGINS_FAILED" -gt 0 ]; then exit 1; fi
 exit 0
