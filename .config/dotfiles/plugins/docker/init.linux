@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Install Docker Engine with Docker's official convenience script (get.docker.com), which sets
+# up Docker's package repository for your distribution (Debian, Ubuntu, Fedora, ...). It is
+# meant for development machines; for servers follow Docker's per-distro instructions. The
+# script is downloaded to a file first, not piped into a shell, so it's a file you could keep.
+#
+# Needs root, so this plugin has a `needs-sudo` file: the password is asked for before this runs.
+# Afterwards the engine is enabled at boot and your user joins the `docker` group. Group
+# membership only applies to NEW login sessions, so log out and back in before running docker
+# without sudo. Note that the docker group is equivalent to root access on the machine.
+# There is no Linux `update` hook: the engine updates with your normal system package updates.
+#
+# DOCKER_VERSION  Optional, e.g. 27.3; passed to the script as VERSION to pin a release.
+set -euo pipefail
+
+sudo -n true 2>/dev/null || { echo "needs sudo; run: sudo -v, then try again" >&2; exit 1; }
+command -v curl >/dev/null 2>&1 || { echo "curl is required" >&2; exit 1; }
+
+script="$(mktemp)"
+trap 'rm -f "$script"' EXIT
+curl -fsSL https://get.docker.com -o "$script"
+
+sudo -n env ${DOCKER_VERSION:+VERSION="$DOCKER_VERSION"} sh "$script"
+
+if command -v systemctl >/dev/null 2>&1; then
+    sudo -n systemctl enable --now docker
+fi
+user="${USER:-$(id -un)}"
+if [ "$user" != root ]; then
+    sudo -n usermod -aG docker "$user"
+fi

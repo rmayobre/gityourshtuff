@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Healthy when the docker daemon answers this user. Prints the engine version, or why not.
+if out="$(docker version --format '{{.Server.Version}}' 2>&1)"; then
+    echo "Docker Engine $out"
+    exit 0
+fi
+case "$out" in
+    *"permission denied"*)
+        echo "docker is installed but this user can't reach the daemon"
+        echo "log out and back in so the docker group applies (or run: newgrp docker)" ;;
+    *"Cannot connect"*|*"connect to the Docker"*|*"error during connect"*|*"failed to connect"*)
+        if [ "$DOT_OS" = macos ]; then echo "the docker daemon isn't running; start Docker Desktop"
+        else echo "the docker daemon isn't running; try: sudo systemctl enable --now docker"; fi ;;
+    *) echo "docker doesn't work: $out" ;;
+esac
+exit 1

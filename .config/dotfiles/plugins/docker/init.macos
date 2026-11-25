@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Install Docker Desktop with Homebrew (a cask). Docker on macOS runs in a VM, so there is no
+# engine to install directly. Open the Docker app once afterwards to finish its setup.
+# Needs Homebrew; macOS has no other package manager to assume.
+set -euo pipefail
+
+command -v brew >/dev/null 2>&1 || { echo "Homebrew is required (https://brew.sh)" >&2; exit 1; }
+brew install --cask docker

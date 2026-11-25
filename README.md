@@ -64,6 +64,36 @@ dot-init --name "Ada" --email ada@example.org --origin git@github.com:ada/dotfil
 It refuses the template's own URL as `origin`, never pushes, and can be run again safely
 (`--reconfigure` asks about everything again). Then `git push -u origin <branch>` and run `dot-doctor`.
 
+## Plugins
+
+Plugins install and maintain things dotfiles can't hold, such as SDKs and editors. Each one is a
+folder in `.config/dotfiles/plugins/NAME/` with a script per hook (`installed`, `init`,
+`update`, ...). Start from `plugins/_template/`, which documents every hook:
+
+```bash
+dot-plugin new flutter     # copy the template, then write installed and init
+# add "flutter" to .config/dotfiles/plugins.list
+dot-plugin run init        # or let dot-init do it
+```
+
+- `dot-init` lists the enabled plugins that aren't installed yet and asks before installing them
+  (`--yes` skips the question, `--no-plugins` skips plugins; without a terminal it installs only
+  with `--yes`). `dot-update` runs `update` for the installed ones. Both accept `--strict`.
+- Hooks run as separate processes. A failing plugin is reported and never stops the command
+  (`--strict` turns it into exit status 1). There is no time limit.
+- A plugin that needs root has an empty `needs-sudo` file; the password is asked for before its
+  hook starts. A plugin may ship an `env.sh` (a `PATH` entry, say) that login shells source.
+- `dot-backup` also asks installed plugins that have a `backup` hook for their data (stored under
+  `.plugin-data/NAME/` in the snapshot, and scanned for secrets); `dot-restore` hands it back to
+  each installed plugin's `restore` hook. Both accept `--no-plugins` and `--strict`.
+- `dot-doctor` runs each installed plugin's `check` hook and shows its report (a plugin problem is
+  a warning, not a failure; `--no-plugins` skips it). `dot-uninstall --remove-plugins` runs
+  their `uninstall` hooks to remove the software they installed; without that flag the software
+  is left alone.
+- Examples ship disabled in `plugins.list`: `flutter`, `docker` and `nvidia-drivers`.
+- `plugins.list` is shared by all your machines. A git-ignored `plugins.local` next to it adds
+  (`name`) or removes (`-name`) plugins on one machine.
+
 ## macOS
 
 The layout works on macOS as well as Linux:

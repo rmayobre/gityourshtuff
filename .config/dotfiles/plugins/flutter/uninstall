@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Remove the Flutter SDK checkout. Your projects, ~/.pub-cache and ~/.android are not touched.
+set -euo pipefail
+
+home="${FLUTTER_HOME:-$HOME/.local/share/flutter}"
+# Only ever delete a folder that really is a Flutter checkout.
+[ -x "$home/bin/flutter" ] && [ -d "$home/.git" ] || { echo "$home doesn't look like a Flutter SDK; not deleting it" >&2; exit 1; }
+rm -rf "${home:?}"

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# update: bring the installed software up to date. (optional)
+#
+# Run by dot-update for every enabled plugin whose `installed` hook succeeds, and by
+# `dot-plugin run update NAME`. Without this file the plugin is simply skipped on update.
+#
+# Contract
+#   Exit 0      success (including "already up to date").
+#   Exit != 0   failure: reported, and dot-update carries on and still finishes its own work.
+#   Same rules as `init`: non-interactive (stdin closed), output shown only on failure, no
+#   time limit, and a `needs-sudo` file in the plugin folder gets the sudo password asked for
+#   before this hook starts.
+#
+# Environment
+#   DOT_PLUGIN, DOT_PLUGIN_DIR, DOT_OS, DOT_ROOT, DOT_COMMON: as in `init`.
+#   DOT_HOOK        "update"
+#
+# Arguments: none.
+#
+# dot-update pulls your dotfiles first, so this hook (and the plugin folder) is already the
+# latest version when it runs.

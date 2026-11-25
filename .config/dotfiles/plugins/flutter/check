@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Healthy when the SDK's launcher runs and `flutter` on PATH is this SDK (env.sh adds it, so a
+# shell started before the install needs to be reopened). Prints the Flutter version line.
+# It deliberately doesn't run `flutter doctor`: that reports on every platform you could target
+# and is slow; run it yourself when you set up a target.
+home="${FLUTTER_HOME:-$HOME/.local/share/flutter}"
+
+version="$("$home/bin/flutter" --version 2>&1 | head -n 1)" || true
+case "$version" in
+    Flutter*) ;;
+    *) echo "the Flutter launcher at $home/bin/flutter doesn't run: $version"
+       echo "try: rm -rf $home && dot-plugin run init flutter"
+       exit 1 ;;
+esac
+
+if [ "$(command -v flutter 2>/dev/null)" != "$home/bin/flutter" ]; then
+    echo "$version"
+    echo "flutter isn't on PATH from this SDK; open a new shell (env.sh adds $home/bin)"
+    exit 1
+fi
+echo "$version"

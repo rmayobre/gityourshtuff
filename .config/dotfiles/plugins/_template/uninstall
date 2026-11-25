@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# uninstall: remove what `init` installed. (optional)
+#
+# Run by dot-uninstall, only when it is given --remove-plugins, for every enabled plugin whose
+# `installed` hook succeeds, last enabled first. It runs before the dotfiles (including this
+# plugin's folder) are removed, after dot-uninstall has saved a "pre-uninstall" backup that
+# includes the data from your `backup` hook. Afterwards `installed` runs again; if it still
+# succeeds the plugin is reported as failed, so make `installed` notice what you removed.
+# Without this file the plugin's software is left in place.
+#
+# Contract
+#   Exit 0      success, or nothing to do.
+#   Exit != 0   failure: reported, and dot-uninstall carries on. The software stays; remove it
+#               by hand.
+#   Remove what `init` put on the machine (SDK folders, packages you added for this plugin);
+#   leave the user's own data (projects, images, volumes) alone, and say so in a comment.
+#   Be careful with deletes: use `rm -rf "${DIR:?}"` so an empty variable can't expand to /.
+#   Never remove system packages other software may need.
+#   Same rules as `init`: non-interactive (stdin closed), no time limit, and a `needs-sudo`
+#   file in the plugin folder gets the sudo password asked for before this hook starts.
+#   Think twice before shipping one at all: removing a graphics driver, say, can leave a
+#   machine without a display, and "no uninstall hook" is a fine answer.
+#
+# Environment
+#   DOT_PLUGIN, DOT_PLUGIN_DIR, DOT_OS, DOT_ROOT, DOT_COMMON: as in `init`.
+#   DOT_HOOK        "uninstall"
+#
+# Arguments: none.

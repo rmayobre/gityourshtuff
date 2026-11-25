@@ -2,17 +2,23 @@
 # Restore dotfiles from a backup made by dot-backup (or the one the installer made of the
 # files it replaced).
 #
-# Usage: dot-restore [--list] [--dry-run] [--yes] [BACKUP]
+# Usage: dot-restore [--list] [--dry-run] [--yes] [--no-plugins] [--strict] [BACKUP]
 #
 #   BACKUP     A folder name in ~/.dotfiles-backup, or a path. Default: the newest backup.
 #   --list     List available backups and exit.
 #   --dry-run  Show which files would change and exit.
 #   --yes      Don't ask for confirmation.
+#   --no-plugins  Don't run plugins' restore hooks.
+#   --strict   Exit 1 if a plugin's restore failed (otherwise it is only reported).
 #
 # Files in the backup overwrite the ones in your home directory; files that aren't in the
 # backup are left alone. Before overwriting, a "pre-restore" backup of your current state is
 # made, so a restore can itself be undone. Submodules aren't restored: afterwards run
 # "git submodule update --init" (or dot-update).
+#
+# If the backup holds plugin data (.plugin-data/NAME/), each of those plugins that is installed
+# then gets its `restore` hook run. Install plugins first (dot-init) when restoring to a new
+# machine; running dot-restore again afterwards restores their data.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
@@ -20,13 +26,17 @@ source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
 LIST=false
 DRY=false
 YES=false
+PLUGINS=true
+STRICT=false
 TARGET=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --list) LIST=true ;;
         --dry-run) DRY=true ;;
         --yes|-y) YES=true ;;
-        -h|--help) sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --no-plugins) PLUGINS=false ;;
+        --strict) STRICT=true ;;
+        -h|--help) sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) error "unknown option: $1 (try --help)"; exit 1 ;;
         *) [ -z "$TARGET" ] || { error "only one backup can be restored at a time"; exit 1; }
            TARGET="$1" ;;
@@ -68,7 +78,7 @@ SRC="$(cd "$SRC" && pwd)"
 # Files that would change: present in the backup and missing or different on disk.
 changed="$(mktemp)"
 trap 'rm -f "$changed"' EXIT
-( cd "$SRC" && find . \( -type f -o -type l \) ! -path ./MANIFEST.txt | sed 's#^\./##' | sort ) |
+( cd "$SRC" && find . \( -type f -o -type l \) ! -path ./MANIFEST.txt ! -path "./$PLUGIN_DATA_DIR" ! -path "./$PLUGIN_DATA_DIR/*" | sed 's#^\./##' | sort ) |
 while IFS= read -r f; do
     if [ ! -e "$ROOT/$f" ] && [ ! -L "$ROOT/$f" ]; then
         echo "new      $f"
@@ -77,27 +87,46 @@ while IFS= read -r f; do
     fi
 done >"$changed"
 
-total="$(cd "$SRC" && find . \( -type f -o -type l \) ! -path ./MANIFEST.txt | wc -l | tr -d ' ')"
+total="$(cd "$SRC" && find . \( -type f -o -type l \) ! -path ./MANIFEST.txt ! -path "./$PLUGIN_DATA_DIR" ! -path "./$PLUGIN_DATA_DIR/*" | wc -l | tr -d ' ')"
 info "Backup: $SRC ($total files, $(wc -l <"$changed" | tr -d ' ') differ from your current files)"
 [ -f "$SRC/MANIFEST.txt" ] && info "Made: $(grep '^created:' "$SRC/MANIFEST.txt" | sed 's/^created: *//')"
 
-if [ ! -s "$changed" ]; then
+# Plugins that stored data in this backup (one name per line, only non-empty folders).
+plugin_names=""
+if $PLUGINS && [ -d "$SRC/$PLUGIN_DATA_DIR" ]; then
+    for d in "$SRC/$PLUGIN_DATA_DIR"/*/; do
+        [ -d "$d" ] || continue
+        [ -n "$(ls -A "$d")" ] && plugin_names="$plugin_names $(basename "$d")"
+    done
+fi
+
+if [ ! -s "$changed" ] && [ -z "$plugin_names" ]; then
     info "Your files already match this backup; nothing to restore"
     exit 0
 fi
-cat "$changed"
+if [ -s "$changed" ]; then cat "$changed"; else info "Your files already match this backup"; fi
+[ -z "$plugin_names" ] || info "Plugin data for:$plugin_names (restored by each installed plugin's restore hook)"
 $DRY && exit 0
 
 if ! $YES; then
-    confirm "Restore these files into $ROOT?" || { info "Cancelled"; exit 0; }
+    confirm "Restore these into $ROOT?" || { info "Cancelled"; exit 0; }
 fi
 
 safety="$BACKUPS/$(date +%Y%m%d-%H%M%S)-pre-restore"
 run_monitored "Saving current state first" snapshot_dotfiles "$safety" || exit 1
+if $PLUGINS; then backup_plugins "$safety"; fi
 info "Current state saved to $safety"
 
 restore_files() { restore_snapshot "$SRC" "$ROOT"; }
-run_monitored "Restoring files" restore_files || exit 1
+if [ -s "$changed" ]; then
+    run_monitored "Restoring files" restore_files || exit 1
+    info "Restored $total files from ${SRC##*/}"
+fi
 
-info "Restored $total files from ${SRC##*/}"
+if [ -n "$plugin_names" ]; then
+    PLUGIN_BACKUP_ROOT="$SRC/$PLUGIN_DATA_DIR"
+    # shellcheck disable=SC2086
+    run_plugins restore $plugin_names
+fi
 info "Submodules were not touched; run: git submodule update --init"
+if $STRICT && [ "$PLUGINS_FAILED" -gt 0 ]; then exit 1; fi

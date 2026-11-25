@@ -1,24 +1,33 @@
 #!/usr/bin/env bash
 # Update your dotfiles and their submodules.
 #
-# Usage: dot-update [--latest] [--commit]
+# Usage: dot-update [--latest] [--commit] [--no-plugins] [--strict]
 #
 #   (no flags)  Pull your repo's latest changes, then sync submodules to the
 #               commits your repo pins.
 #   --latest    Also move each submodule to its newest stable release tag
 #               (vX.Y.Z, ignoring betas) and stage the change.
 #   --commit    With --latest, commit the staged submodule bumps.
+#   --no-plugins  Skip running the update hook of installed plugins.
+#   --strict    Exit 1 if a plugin failed to update (otherwise it is only reported).
+#
+# After updating, each enabled plugin that is installed gets its `update` hook run; a failing
+# plugin is reported and never stops the update.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
 
 LATEST=false
 COMMIT=false
+PLUGINS=true
+STRICT=false
 for arg in "$@"; do
     case "$arg" in
         --latest) LATEST=true ;;
         --commit) COMMIT=true ;;
-        -h|--help) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --no-plugins) PLUGINS=false ;;
+        --strict) STRICT=true ;;
+        -h|--help) sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) error "unknown option: $arg (try --help)"; exit 1 ;;
     esac
 done
@@ -71,4 +80,9 @@ if $LATEST; then
     fi
 fi
 
+if $PLUGINS; then
+    run_plugins update
+fi
+
 info "Done"
+if $STRICT && [ "$PLUGINS_FAILED" -gt 0 ]; then exit 1; fi

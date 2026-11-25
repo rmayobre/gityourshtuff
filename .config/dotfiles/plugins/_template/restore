@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# restore: put the plugin's data back from a dot-backup snapshot. (optional)
+#
+# Run by dot-restore, after your dotfiles are restored, for every plugin that stored data in the
+# chosen snapshot AND is installed now. So restoring an old snapshot never triggers a plugin
+# that didn't exist then, and on a new machine you install plugins first (dot-init), then run
+# dot-restore: it restores the plugin data even when your files already match the backup.
+# Read what your `backup` hook wrote from $DOT_BACKUP_SRC and put it where it belongs.
+#
+# Contract
+#   Exit 0      success.
+#   Exit != 0   failure: reported, and dot-restore carries on. Run dot-restore again after
+#               fixing it.
+#   Be rerunnable: it may run again for the same snapshot.
+#   Don't overwrite files silently if they may hold newer changes: dot-restore saves a
+#   "pre-restore" snapshot (including this plugin's `backup` data) first, but say what you did.
+#   Same rules as `init`: non-interactive, output only on failure, no time limit, `needs-sudo`.
+#
+# Environment
+#   DOT_PLUGIN, DOT_PLUGIN_DIR, DOT_OS, DOT_ROOT, DOT_COMMON: as in `init`.
+#   DOT_HOOK        "restore"
+#   DOT_BACKUP_SRC  this plugin's folder inside the snapshot, exactly as `backup` left it
+#                   (read-only: don't modify the snapshot)
+#
+# Arguments: none.
+#
+# Example:
+#   xargs -n1 code --install-extension < "$DOT_BACKUP_SRC/extensions.txt"

@@ -2,24 +2,32 @@
 # Back up your current dotfiles: the tracked files plus any new files your whitelist
 # .gitignore allows, exactly as they are on disk (uncommitted edits included).
 #
-# Usage: dot-backup [--name LABEL]
+# Usage: dot-backup [--name LABEL] [--no-plugins] [--strict]
 #
 #   --name LABEL   Add LABEL to the backup's folder name (for example "before-upgrade").
+#   --no-plugins   Don't ask plugins for their data.
+#   --strict       Exit 1 if a plugin's backup failed (otherwise it is only reported).
 #
 # Backups go to ~/.dotfiles-backup/<timestamp>[-LABEL]/ (override the location with
 # DOTFILES_BACKUP_DIR). A MANIFEST.txt records the date, host, branch and commit. Submodules
-# are recorded by commit, not copied. Restore with dot-restore.
+# are recorded by commit, not copied. Each enabled, installed plugin that has a `backup` hook
+# may also store its own data in .plugin-data/NAME/ (a plugin that fails is reported and the
+# backup carries on). Restore with dot-restore.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
 
 LABEL=""
+PLUGINS=true
+STRICT=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --name)
             [ $# -ge 2 ] || { error "--name needs a value"; exit 1; }
             LABEL="$2"; shift 2 ;;
-        -h|--help) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --no-plugins) PLUGINS=false; shift ;;
+        --strict) STRICT=true; shift ;;
+        -h|--help) sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) error "unknown option: $1 (try --help)"; exit 1 ;;
     esac
 done
@@ -36,5 +44,9 @@ dest="$(backup_root)/$(date +%Y%m%d-%H%M%S)${LABEL:+-$LABEL}"
 [ -e "$dest" ] && { error "$dest already exists; try again in a second"; exit 1; }
 
 run_monitored "Backing up dotfiles" snapshot_dotfiles "$dest" || exit 1
+if $PLUGINS; then
+    backup_plugins "$dest"
+fi
 info "Backup saved to $dest"
 info "$(grep '^files:' "$dest/MANIFEST.txt" | sed 's/  */ /') backed up; restore with: dot-restore ${dest##*/}"
+if $STRICT && [ "$PLUGINS_FAILED" -gt 0 ]; then exit 1; fi

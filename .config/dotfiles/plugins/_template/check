@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# check: health check for the installed software. (optional)
+#
+# Run by dot-doctor for every enabled plugin whose `installed` hook succeeds. `installed`
+# answers "is it there?"; this answers "does it work?", e.g. `flutter doctor` finds no
+# problems, the docker daemon answers, the right version is on PATH, a config file parses.
+# Without this file dot-doctor only reports that the plugin is installed.
+#
+# Contract
+#   Exit 0      healthy. Print nothing, or a short status line (a version, say): dot-doctor
+#               shows the first line as information and indents any further lines.
+#   Exit != 0   unhealthy. Print what is wrong and how to fix it, most important line first:
+#               dot-doctor shows it as a warning. A plugin problem is a warning, never a
+#               failure of dot-doctor itself.
+#   Read-only and quick: don't change anything, don't download, don't wait on the network.
+#   Unlike other hooks the output is shown on success too: it is the report. Same rules as
+#   `init` otherwise: non-interactive (stdin closed), no time limit. Run as your normal user,
+#   so it cannot use sudo; check what you can without root.
+#
+# Environment
+#   DOT_PLUGIN, DOT_PLUGIN_DIR, DOT_OS, DOT_ROOT, DOT_COMMON: as in `init`.
+#   DOT_HOOK        "check"
+#
+# Arguments: none.
+#
+# Example:
+#   flutter --version | head -n 1
+#   docker info >/dev/null 2>&1 || { echo "the docker daemon isn't answering; is it running?"; exit 1; }

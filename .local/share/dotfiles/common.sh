@@ -99,9 +99,10 @@ snapshot_dotfiles() {
 }
 
 # restore_snapshot SRC ROOT: copy every file from the backup folder SRC into ROOT (keeping
-# paths and permissions), except SRC/MANIFEST.txt. Same tar pipe as snapshot_dotfiles.
+# paths and permissions), except SRC/MANIFEST.txt and the plugin data in SRC/.plugin-data,
+# which plugins restore themselves. Same tar pipe as snapshot_dotfiles.
 restore_snapshot() {
-    tar -C "$1" --exclude ./MANIFEST.txt -cf - . | tar -C "$2" -xf -
+    tar -C "$1" --exclude ./MANIFEST.txt --exclude "./$PLUGIN_DATA_DIR" -cf - . | tar -C "$2" -xf -
 }
 
 # is_sensitive PATH: succeeds if a root-relative PATH looks like a secret (keys, credentials,
@@ -119,3 +120,7 @@ is_sensitive() {
 
 # Extended regex for secrets inside files: private key blocks and common token formats.
 SECRET_PATTERN='-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}'
+
+# Plugin runner (run_plugins, enabled_plugins, ...). Kept in its own file; see plugins.sh.
+# shellcheck source=/dev/null
+source "$_dot_dir/plugins.sh"
