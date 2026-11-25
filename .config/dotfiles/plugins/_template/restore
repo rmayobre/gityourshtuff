@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# restore: put the plugin's data back from a dot-backup snapshot. (optional)
+#
+# RESERVED: dot-restore does not call plugin hooks yet. This documents the planned contract.
+#
+# Planned: run by dot-restore only for plugins that stored something in the chosen snapshot,
+# so restoring an old snapshot never triggers a plugin that didn't exist then. Read what your
+# `backup` hook wrote from DOT_BACKUP_SRC and put it where it belongs.
+#
+# Contract
+#   Exit 0      success.
+#   Exit != 0   failure, reported without stopping the restore.
+#   Don't overwrite files silently if they may hold newer changes; say what you did.
+#
+# Environment
+#   DOT_PLUGIN, DOT_PLUGIN_DIR, DOT_OS, DOT_ROOT, DOT_COMMON: as in `init`.
+#   DOT_HOOK        "restore"
+#   DOT_BACKUP_SRC  this plugin's folder inside the snapshot, exactly as `backup` left it
+#
+# Arguments: none.

@@ -3,20 +3,25 @@
 # "origin" at your own dotfiles repo.
 #
 # Usage: dot-init [--name NAME] [--email EMAIL] [--origin URL] [--reconfigure] [--commit]
+#                 [--no-plugins] [--strict]
 #
 #   --name NAME      Your name for git commits (written to ~/.gitconfig).
 #   --email EMAIL    Your email for git commits.
 #   --origin URL     URL of your own dotfiles repo; becomes the "origin" remote.
 #   --reconfigure    Ask again even for values that are already set.
 #   --commit         Commit the .gitconfig change ("Set git identity").
+#   --no-plugins     Don't install plugins (see plugins.list; list them with dot-plugin list).
+#   --strict         Exit 1 if a plugin failed to install (otherwise it is only reported).
 #
 # Anything not given as an option is asked for, but only when it still has the template's
 # placeholder (or nothing). Run it again any time; settled values are left alone.
+# Then it installs the enabled plugins that aren't installed yet; a failing plugin is
+# reported and the rest carry on.
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
 
-NAME=""; EMAIL=""; ORIGIN=""; RECONFIGURE=false; COMMIT=false
+NAME=""; EMAIL=""; ORIGIN=""; RECONFIGURE=false; COMMIT=false; PLUGINS=true; STRICT=false
 need_value() { [ "$2" -ge 2 ] || { error "$1 needs a value"; exit 1; }; }
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -25,7 +30,9 @@ while [ $# -gt 0 ]; do
         --origin) need_value "$1" $#; ORIGIN="$2"; shift ;;
         --reconfigure) RECONFIGURE=true ;;
         --commit) COMMIT=true ;;
-        -h|--help) sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --no-plugins) PLUGINS=false ;;
+        --strict) STRICT=true ;;
+        -h|--help) sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) error "unknown option: $1 (try --help)"; exit 1 ;;
     esac
     shift
@@ -121,6 +128,11 @@ elif [ -z "$current_origin" ] || is_template "$current_origin"; then
     ORIGIN_OK=false
 fi
 
+# --- plugins -----------------------------------------------------------------------------
+if $PLUGINS; then
+    run_plugins init
+fi
+
 # --- commit and next steps ---------------------------------------------------------------
 branch="$(git -C "$ROOT" symbolic-ref --short -q HEAD || true)"
 if $CHANGED && $COMMIT; then
@@ -133,4 +145,5 @@ fi
 if ! $CHANGED && $ORIGIN_OK; then info "Nothing to change; your setup is already initialised"; fi
 if [ -n "$branch" ]; then info "Publish with: git push -u origin $branch"; fi
 info "Then run dot-doctor to check everything"
+if $STRICT && [ "$PLUGINS_FAILED" -gt 0 ]; then exit 1; fi
 exit 0

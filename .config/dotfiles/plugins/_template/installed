@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# installed: is this plugin's software installed? (REQUIRED)
+#
+# This is the gate for every other hook, so every plugin needs it:
+#   dot-init    runs `init` only when this FAILS (not installed yet).
+#   dot-update  runs `update` (and later hooks such as `backup` and `check`) only when this
+#               SUCCEEDS.
+# After `init` finishes, it runs again to confirm the install worked.
+#
+# Contract
+#   Exit 0      installed.
+#   Exit != 0   not installed (or only partly installed: test for the finished result, so an
+#               interrupted install is retried rather than skipped).
+#   Keep it fast and silent: no downloads, no prompts, no output. Its output is discarded.
+#
+# Environment
+#   DOT_PLUGIN      this plugin's name, e.g. "flutter"
+#   DOT_PLUGIN_DIR absolute path of this plugin's folder (also the working directory)
+#   DOT_HOOK        "installed"
+#   DOT_OS          linux | macos | other
+#   DOT_ROOT        the dotfiles worktree, normally $HOME
+#   DOT_COMMON      path to common.sh; `source "$DOT_COMMON"` loads shtuff (info, warn,
+#                   install, ...) if you want it. Not needed for a simple check.
+#
+# Arguments: none. Standard input is closed.
+#
+# Example idea: a tool on PATH, or a file the installer leaves behind.
+#   command -v flutter >/dev/null
+#   [ -x "$HOME/.local/share/flutter/bin/flutter" ]
+#
+# Per-OS variants: `installed.linux` or `installed.macos` next to this file take precedence
+# over `installed` on that OS. The same applies to every other hook.
+#
+# This file must be executable (chmod +x), like every hook.

@@ -119,3 +119,7 @@ is_sensitive() {
 
 # Extended regex for secrets inside files: private key blocks and common token formats.
 SECRET_PATTERN='-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}'
+
+# Plugin runner (run_plugins, enabled_plugins, ...). Kept in its own file; see plugins.sh.
+# shellcheck source=/dev/null
+source "$_dot_dir/plugins.sh"

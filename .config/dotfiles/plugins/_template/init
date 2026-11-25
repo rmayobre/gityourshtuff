@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# init: install and configure the plugin. (REQUIRED)
+#
+# Run by dot-init for every enabled plugin whose `installed` hook fails, and by
+# `dot-plugin run init NAME`. Afterwards `installed` runs again; if it still fails, the
+# plugin is reported as failed.
+#
+# Contract
+#   Exit 0      success.
+#   Exit != 0   failure. The output (stdout and stderr) is shown, the plugin is reported as
+#               failed, and dot-init carries on with the next plugin.
+#   Be rerunnable: a failed or interrupted run will be tried again from the start, so use
+#   `mkdir -p`, check before cloning, and prefer idempotent commands.
+#   Be non-interactive: standard input is closed, so a prompt gets end-of-file.
+#   Output is captured and only shown on failure, behind a progress spinner, so print
+#   whatever helps you debug a failure.
+#   Hooks are stopped after DOT_PLUGIN_TIMEOUT seconds (default 600; 0 disables, and it needs
+#   `timeout` or `gtimeout`).
+#
+# Environment
+#   DOT_PLUGIN      this plugin's name
+#   DOT_PLUGIN_DIR absolute path of this plugin's folder (also the working directory), handy
+#                   for shipping data files next to the hook
+#   DOT_HOOK        "init"
+#   DOT_OS          linux | macos | other
+#   DOT_ROOT        the dotfiles worktree, normally $HOME
+#   DOT_COMMON      path to common.sh; `source "$DOT_COMMON"` loads shtuff: info, warn,
+#                   error, install (system packages; auto-detects apt, dnf, ... but not
+#                   Homebrew, so use `brew install` on macOS), copy, move, delete, ...
+#                   Note that shtuff's `install` shadows the system `install` command and
+#                   `error` does not exit.
+#
+# Arguments: none.
+#
+# Good to know
+#   - Don't write into tracked paths of your dotfiles repo (they would show up as changes).
+#     Keep downloaded software under ~/.local/share/NAME, which the whitelist ignores.
+#   - Don't print or store secrets; the output is shown on failure.
+#   - Pin versions (a tag or release) so every machine ends up with the same thing.
+#   - macOS ships bash 3.2 and BSD tools. A hook runs under the interpreter on its `#!` line,
+#     so avoid bash 4 features (or ship a separate `init.macos`) if it must run there.

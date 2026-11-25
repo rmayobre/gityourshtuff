@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# uninstall: remove what `init` installed. (optional)
+#
+# RESERVED: dot-uninstall does not call plugin hooks yet. This documents the planned contract.
+#
+# Planned: run by dot-uninstall for installed plugins, before the dotfiles themselves are
+# removed. Remove what `init` put on the machine (SDK folders, symlinks, packages you added
+# for this plugin); leave the user's own data alone.
+#
+# Contract
+#   Exit 0      success, or nothing to do.
+#   Exit != 0   failure, reported without stopping the uninstall.
+#   Be careful with deletes: use `rm -rf "${DIR:?}"` so an empty variable can't expand to /.
+#   Never remove system packages other software may need.
+#
+# Environment
+#   DOT_PLUGIN, DOT_PLUGIN_DIR, DOT_OS, DOT_ROOT, DOT_COMMON: as in `init`.
+#   DOT_HOOK        "uninstall"
+#
+# Arguments: none.

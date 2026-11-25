@@ -1,0 +1,11 @@
+# Plugins to enable on every machine, one name per line (a folder in plugins/). Blank lines
+# and "#" comments are ignored. Order is the order they run in.
+#
+# dot-init installs the ones that aren't installed yet; dot-update updates the ones that are.
+# To change this on one machine only, create plugins.local next to this file (it is
+# git-ignored): "name" adds a plugin there, "-name" turns off one listed here.
+#
+# Create a plugin with: dot-plugin new NAME
+#
+# Example:
+# flutter

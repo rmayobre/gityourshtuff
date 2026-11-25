@@ -64,6 +64,25 @@ dot-init --name "Ada" --email ada@example.org --origin git@github.com:ada/dotfil
 It refuses the template's own URL as `origin`, never pushes, and can be run again safely
 (`--reconfigure` asks about everything again). Then `git push -u origin <branch>` and run `dot-doctor`.
 
+## Plugins
+
+Plugins install and maintain things dotfiles can't hold, such as SDKs and editors. Each one is a
+folder in `.config/dotfiles/plugins/NAME/` with a script per hook (`installed`, `init`,
+`update`, ...). Start from `plugins/_template/`, which documents every hook:
+
+```bash
+dot-plugin new flutter     # copy the template, then write installed and init
+# add "flutter" to .config/dotfiles/plugins.list
+dot-plugin run init        # or let dot-init do it
+```
+
+- `dot-init` installs enabled plugins that aren't installed yet; `dot-update` runs `update` for
+  the ones that are. Both accept `--no-plugins` and `--strict`.
+- Hooks run as separate processes. A failing plugin is reported and never stops the command
+  (`--strict` turns it into exit status 1).
+- `plugins.list` is shared by all your machines. A git-ignored `plugins.local` next to it adds
+  (`name`) or removes (`-name`) plugins on one machine.
+
 ## macOS
 
 The layout works on macOS as well as Linux:

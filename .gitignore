@@ -39,6 +39,13 @@
 /.config/*
 !/.config/shell/
 !/.config/shell/**
+# Plugins: the enabled list and each plugin's folder are tracked. plugins.local (per-machine
+# overrides) is deliberately not allowed, so it stays untracked.
+!/.config/dotfiles/
+/.config/dotfiles/*
+!/.config/dotfiles/plugins.list
+!/.config/dotfiles/plugins/
+!/.config/dotfiles/plugins/**
 
 # Example for another app:
 # !/.config/nvim/

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# backup: add the plugin's own data to a dot-backup snapshot. (optional)
+#
+# RESERVED: dot-backup does not call plugin hooks yet. This documents the planned contract.
+#
+# Planned: run by dot-backup for installed plugins. Copy or generate whatever should be kept
+# into the folder given in DOT_BACKUP_DEST; it is stored inside the snapshot, next to the
+# dotfiles, and is yours to lay out. Examples: editor settings that live outside the
+# whitelist, the output of `code --list-extensions`, a pinned SDK version.
+#
+# Contract
+#   Exit 0      success. Writing nothing is fine.
+#   Exit != 0   failure, reported without stopping the backup.
+#   Never copy credentials or keys; dot-backup will scan the folder for secrets.
+#
+# Environment
+#   DOT_PLUGIN, DOT_PLUGIN_DIR, DOT_OS, DOT_ROOT, DOT_COMMON: as in `init`.
+#   DOT_HOOK         "backup"
+#   DOT_BACKUP_DEST  existing, empty folder reserved for this plugin in the snapshot
+#
+# Arguments: none.

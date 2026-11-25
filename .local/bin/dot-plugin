@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Manage dotfiles plugins: list them, create one from the template, or run a hook by hand.
+#
+# Usage: dot-plugin list
+#        dot-plugin new NAME
+#        dot-plugin run HOOK [NAME...]
+#
+#   list           Show every plugin, whether it is enabled in plugins.list/plugins.local, and
+#                  whether its `installed` hook says it is installed.
+#   new NAME       Copy plugins/_template to plugins/NAME (lowercase letters, digits, - and _).
+#                  Its `installed` hook fails until you write a real check, so `init` will run.
+#   run HOOK [NAME...]
+#                  Run HOOK (init or update) now, for the named plugins or, with no names, for
+#                  every enabled plugin. dot-init and dot-update run them for you; use this to
+#                  retry one plugin or to try a plugin before enabling it.
+#
+# Plugins live in ~/.config/dotfiles/plugins/NAME/; see _template/ there for the hooks.
+# Enable one by adding its name to ~/.config/dotfiles/plugins.list. A plugin that fails never
+# stops anything else; it is reported and the command exits 1 only if a plugin failed here.
+set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/../share/dotfiles/common.sh"
+
+usage() { sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+cmd="${1:-}"
+[ $# -eq 0 ] || shift
+case "$cmd" in
+    -h|--help|"") usage; [ -n "$cmd" ] || exit 1; exit 0 ;;
+esac
+
+PLUGINS="$(plugins_dir)"
+
+case "$cmd" in
+    list)
+        [ $# -eq 0 ] || { error "list takes no arguments"; exit 1; }
+        enabled=" $(enabled_plugins | tr '\n' ' ')"
+        found=false
+        for dir in "$PLUGINS"/*/; do
+            [ -d "$dir" ] || continue
+            name="$(basename "$dir")"
+            case "$name" in _*) continue ;; esac
+            found=true
+            case "$enabled" in *" $name "*) state=enabled ;; *) state=disabled ;; esac
+            if plugin_is_installed "$name"; then inst=installed; else inst="not installed"; fi
+            info "$name: $state, $inst"
+        done
+        for name in $enabled; do
+            [ -d "$PLUGINS/$name" ] || { found=true; warn "$name: enabled but no folder in $PLUGINS"; }
+        done
+        $found || info "No plugins yet. Create one with: dot-plugin new NAME"
+        ;;
+    new)
+        [ $# -eq 1 ] || { error "usage: dot-plugin new NAME"; exit 1; }
+        name="$1"
+        valid_plugin_name "$name" || { error "invalid name '$name': use lowercase letters, digits, - and _, starting with a letter or digit"; exit 1; }
+        [ -d "$PLUGINS/_template" ] || { error "template not found: $PLUGINS/_template"; exit 1; }
+        [ ! -e "$PLUGINS/$name" ] || { error "$PLUGINS/$name already exists"; exit 1; }
+        mkdir -p "$PLUGINS/$name"
+        copy "$PLUGINS/_template/." "$PLUGINS/$name/" --message "Creating plugin $name" || exit 1
+        # The template's hooks are documentation only (they would all "succeed"). Make the new
+        # plugin start out "not installed" so that its init runs and tells you what to write.
+        printf '\n# TODO: replace with a real check. Exiting 1 means "not installed".\nexit 1\n' >>"$PLUGINS/$name/installed"
+        info "Created $PLUGINS/$name"
+        info "Next: write installed and init there, add '$name' to $(plugin_config_dir)/plugins.list, then run: dot-plugin run init $name"
+        ;;
+    run)
+        [ $# -ge 1 ] || { error "usage: dot-plugin run HOOK [NAME...]"; exit 1; }
+        hook="$1"; shift
+        case " $PLUGIN_HOOKS " in *" $hook "*) ;; *) error "unknown hook '$hook' (use one of: $PLUGIN_HOOKS)"; exit 1 ;; esac
+        run_plugins "$hook" "$@"
+        [ "$PLUGINS_FAILED" -eq 0 ] || exit 1
+        ;;
+    *)
+        error "unknown command: $cmd (try --help)"; exit 1 ;;
+esac
